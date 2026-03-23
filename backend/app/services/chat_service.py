@@ -1,7 +1,7 @@
 import os
 from sqlalchemy import select
 from langchain_groq import ChatGroq
-from langchain.schema import SystemMessage, HumanMessage, AIMessage
+from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
 
 from app.models.chatbot_guidelines import ChatbotGuidelines
 from app.services.cache import get_session_messages, invalidate_session_messages

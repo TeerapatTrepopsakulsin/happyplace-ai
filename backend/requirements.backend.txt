@@ -5,3 +5,6 @@ bcrypt
 langchain
 langchain-groq
 langchain-core
+pytest
+httpx
+pytest-asyncio
