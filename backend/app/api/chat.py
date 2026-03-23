@@ -122,3 +122,96 @@ async def get_messages(
         ) for m in messages
     ]
 
+
+@router.post("/sessions/{session_id}/messages", response_model=SendMessageResponse)
+async def send_message(
+    session_id: str,
+    request: SendMessageRequest,
+    current_user: User = Depends(require_role("regular")),
+    db: AsyncSession = Depends(get_db),
+    redis_client = Depends(get_redis)
+):
+    # Verify session belongs to current user
+    session = await db.get(ChatSession, session_id)
+    if not session or session.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Access denied")
+
+    # 1. Persist user message
+    user_msg = Message(
+        session_id=session_id,
+        sender="user",
+        content=request.content,
+        emotion_label=None,
+        emotion_score=None,
+        danger_flag=False
+    )
+    db.add(user_msg)
+    await db.commit()
+    await db.refresh(user_msg)
+
+    # 2. Get conversation history
+    history = await get_conversation_history(session_id, redis_client, db)
+
+    # 3. Get guidelines
+    guidelines = await get_guidelines(current_user.id, db)
+
+    # 4. Build system prompt
+    system_prompt = build_system_prompt(guidelines)
+
+    # 5. Call Groq
+    try:
+        assistant_content = await call_groq(system_prompt, history, request.content)
+    except Exception:
+        raise HTTPException(status_code=502, detail="LLM service unavailable")
+
+    # 6. Persist assistant message
+    assistant_msg = Message(
+        session_id=session_id,
+        sender="assistant",
+        content=assistant_content,
+        emotion_label=None,
+        emotion_score=None,
+        danger_flag=False
+    )
+    db.add(assistant_msg)
+
+    # Update session last_active
+    session.last_active = assistant_msg.created_at
+
+    await db.commit()
+    await db.refresh(assistant_msg)
+
+    # 7. Update session cache
+    await update_session_cache(session_id, redis_client, db)
+
+    # 8. Publish event
+    payload = {
+        "message_id": str(assistant_msg.id),
+        "session_id": session_id,
+        "patient_id": str(current_user.id),
+        "content": assistant_content,
+        "sender": "assistant"
+    }
+    publish_message_created(redis_client, payload)
+
+    # 9. Return response
+    return SendMessageResponse(
+        user_message=MessageResponse(
+            id=str(user_msg.id),
+            sender=user_msg.sender,
+            content=user_msg.content,
+            emotion_label=user_msg.emotion_label,
+            emotion_score=user_msg.emotion_score,
+            danger_flag=user_msg.danger_flag,
+            created_at=user_msg.created_at.isoformat()
+        ),
+        assistant_message=MessageResponse(
+            id=str(assistant_msg.id),
+            sender=assistant_msg.sender,
+            content=assistant_msg.content,
+            emotion_label=assistant_msg.emotion_label,
+            emotion_score=assistant_msg.emotion_score,
+            danger_flag=assistant_msg.danger_flag,
+            created_at=assistant_msg.created_at.isoformat()
+        )
+    )
