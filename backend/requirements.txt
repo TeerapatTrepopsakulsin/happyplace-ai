@@ -3,4 +3,7 @@ uvicorn
 sqlalchemy>=2.0
 asyncpg
 alembic
+pydantic[email]
 python-dotenv
+python-jose[cryptography]
+bcrypt
