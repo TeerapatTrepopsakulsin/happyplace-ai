@@ -1,1 +1,4 @@
 # Worker-specific dependencies for analysis
+langchain
+langchain-groq
+langchain-core
