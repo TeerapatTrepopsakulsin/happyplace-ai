@@ -184,13 +184,13 @@ async def send_message(
     # 7. Update session cache
     await update_session_cache(session_id, redis_client, db)
 
-    # 8. Publish event
+    # 8. Publish event (user message event is required for emotion/danger analysis)
     payload = {
-        "message_id": str(assistant_msg.id),
+        "message_id": str(user_msg.id),
         "session_id": session_id,
         "patient_id": str(current_user.id),
-        "content": assistant_content,
-        "sender": "assistant"
+        "content": user_msg.content,
+        "sender": "user"
     }
     publish_message_created(redis_client, payload)
 
