@@ -107,13 +107,7 @@ async def get_patients(
     return patients
 
 
-@router.get("/dashboard/patients/{patient_id}/summary", response_model=DashboardSummaryResponse)
-async def get_patient_summary(
-    patient_id: str,
-    current_user: User = Depends(require_role("therapist", "guardian")),
-    db: AsyncSession = Depends(get_db)
-):
-    # Verify invitation exists
+async def _verify_invitation(patient_id: str, current_user: User, db: AsyncSession):
     invitation_stmt = select(Invitation).where(
         and_(Invitation.sender_id == patient_id, Invitation.invitee_id == current_user.id)
     )
@@ -122,7 +116,39 @@ async def get_patient_summary(
     if not invitation:
         raise HTTPException(status_code=403, detail="Access denied")
 
-    # Get last 7 days summaries
+
+def _calculate_mood_trend(summaries: List[DashboardSummary]) -> str:
+    if not summaries:
+        return "stable"
+
+    now_date = datetime.utcnow().date()
+    recent_cutoff = now_date - timedelta(days=3)
+
+    recent_summaries = [s for s in summaries if s.summary_date >= recent_cutoff]
+    previous_summaries = [s for s in summaries if s.summary_date < recent_cutoff]
+
+    def avg_score(items):
+        scores = [s.avg_emotion_score for s in items if s.avg_emotion_score is not None]
+        return sum(scores) / len(scores) if scores else 0
+
+    recent_avg = avg_score(recent_summaries)
+    previous_avg = avg_score(previous_summaries)
+
+    if recent_avg > previous_avg + 0.05:
+        return "improving"
+    if recent_avg < previous_avg - 0.05:
+        return "declining"
+    return "stable"
+
+
+@router.get("/dashboard/patients/{patient_id}/summary", response_model=DashboardSummaryResponse)
+async def get_patient_summary(
+    patient_id: str,
+    current_user: User = Depends(require_role("therapist", "guardian")),
+    db: AsyncSession = Depends(get_db)
+):
+    await _verify_invitation(patient_id, current_user, db)
+
     seven_days_ago = datetime.utcnow() - timedelta(days=7)
     summaries_stmt = select(DashboardSummary).where(
         and_(DashboardSummary.user_id == patient_id, DashboardSummary.summary_date >= seven_days_ago.date())
@@ -138,27 +164,12 @@ async def get_patient_summary(
             danger_events_last_7d=0
         )
 
-    # Calculate aggregates
     session_count_last_7d = sum(s.session_count for s in summaries)
     danger_events_last_7d = sum(s.danger_event_count for s in summaries)
 
-    # Dominant emotion: most common
     emotions = [s.dominant_emotion for s in summaries if s.dominant_emotion]
     dominant_emotion_last_7d = max(set(emotions), key=emotions.count) if emotions else None
-
-    # Mood trend: compare last 3 days vs previous 4 days
-    recent_summaries = [s for s in summaries if s.summary_date >= (datetime.utcnow() - timedelta(days=3)).date()]
-    previous_summaries = [s for s in summaries if s.summary_date < (datetime.utcnow() - timedelta(days=3)).date()]
-
-    recent_avg = sum(s.avg_emotion_score for s in recent_summaries if s.avg_emotion_score) / len([s for s in recent_summaries if s.avg_emotion_score]) if recent_summaries else 0
-    previous_avg = sum(s.avg_emotion_score for s in previous_summaries if s.avg_emotion_score) / len([s for s in previous_summaries if s.avg_emotion_score]) if previous_summaries else 0
-
-    if recent_avg > previous_avg + 0.05:
-        mood_trend = "improving"
-    elif recent_avg < previous_avg - 0.05:
-        mood_trend = "declining"
-    else:
-        mood_trend = "stable"
+    mood_trend = _calculate_mood_trend(summaries)
 
     return DashboardSummaryResponse(
         mood_trend=mood_trend,
