@@ -1,0 +1,31 @@
+name: Code Quality Checks
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  cc-check:
+    name: Cyclomatic Complexity
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install radon
+        run: pip install radon
+
+      - name: Check CC
+        run: |
+          radon cc backend/app/ -s -a
+          VIOLATIONS=$(radon cc backend/app/ -n C --no-assert -s)
+          if [ -n "$VIOLATIONS" ]; then
+            echo "CC violations found:"
+            echo "$VIOLATIONS"
+            exit 1
+          fi
+          echo "CC check passed!"
