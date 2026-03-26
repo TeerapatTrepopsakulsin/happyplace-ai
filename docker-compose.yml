@@ -19,6 +19,27 @@ services:
     ports:
       - "6379:6379"
 
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.backend
+    ports:
+      - "8000:8000"
+    env_file:
+      - ./backend/.env
+    depends_on:
+      - db
+      - redis
+
+  analysis_worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.analysis_worker
+    env_file:
+      - ./backend/.env
+    depends_on:
+      - db
+      - redis
 
 volumes:
   postgres_data:
