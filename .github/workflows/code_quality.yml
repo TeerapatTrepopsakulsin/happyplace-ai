@@ -22,7 +22,7 @@ jobs:
       - name: CC Check
         run: |
           radon cc backend/app/ backend/workers -s -a
-          VIOLATIONS=$(radon cc backend/app/ backend/worker.py -n C --no-assert -s)
+          VIOLATIONS=$(radon cc backend/app/ backend/workers -n C --no-assert -s)
           if [ -n "$VIOLATIONS" ]; then
             echo "CC violations found:"
             echo "$VIOLATIONS"
