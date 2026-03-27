@@ -16,7 +16,7 @@ export interface Session {
 
 export interface Message {
   id: string
-  role: 'user' | 'assistant'
+  sender: 'user' | 'assistant'
   content: string
   emotion_label?: string | null
   emotion_score?: number | null
