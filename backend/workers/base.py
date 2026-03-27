@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 
 class WorkerBase:
-    def __init__(self, channel: str, redis_url: str = None):
+    def __init__(self, channel: str, redis_url: str = ""):
         self.redis_url = redis_url or os.getenv("REDIS_URL", "redis://localhost:6379")
         self.channel = channel
 

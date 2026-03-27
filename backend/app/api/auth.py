@@ -67,7 +67,7 @@ async def register(request: RegisterRequest, db: AsyncSession = Depends(get_db))
     await db.commit()
     await db.refresh(user)
 
-    return RegisterResponse(id=str(user.id), email=user.email, role=user.role)
+    return RegisterResponse(id=str(user.id), email=user.email.scalar_one(), role=str(user.role))
 
 
 @router.post("/login", response_model=LoginResponse)
@@ -82,7 +82,7 @@ async def login(request: LoginRequest, db: AsyncSession = Depends(get_db)):
         )
 
     # Verify password
-    if not verify_password(request.password, user.password_hash):
+    if not verify_password(request.password, str(user.password_hash)):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid email or password"
         )

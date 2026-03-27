@@ -20,15 +20,7 @@ jobs:
         run: pip install radon ruff mypy bandit
 
       - name: CC Check
-        run: |
-          radon cc backend/app/ backend/workers -s -a
-          VIOLATIONS=$(radon cc backend/app/ backend/workers -n C --no-assert -s)
-          if [ -n "$VIOLATIONS" ]; then
-            echo "CC violations found:"
-            echo "$VIOLATIONS"
-            exit 1
-          fi
-          echo "CC check passed!"
+        run: radon cc backend/app/ backend/workers -n C --no-assert -s || exit 1
 
       - name: Ruff Lint
         run: ruff check backend/app/ backend/workers

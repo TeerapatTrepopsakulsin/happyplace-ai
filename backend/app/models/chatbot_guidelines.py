@@ -1,8 +1,12 @@
 from sqlalchemy import Column, ForeignKey, Text
 from sqlalchemy.dialects.postgresql import UUID, TIMESTAMP, ARRAY
 from sqlalchemy.sql import text
+from sqlalchemy.orm import Mapped, mapped_column
+from typing import List
+
 
 from app.models.base import Base
+
 
 
 class ChatbotGuidelines(Base):
@@ -16,7 +20,7 @@ class ChatbotGuidelines(Base):
     response_tone = Column(Text, nullable=True)
     coping_strategies = Column(Text, nullable=True)
     behavioral_boundaries = Column(Text, nullable=True)
-    sensitive_topics = Column(ARRAY(Text), nullable=True)
+    sensitive_topics: Mapped[list[str] | None] = mapped_column(ARRAY(Text), nullable=True)
     updated_at = Column(
         TIMESTAMP(timezone=True), nullable=False, server_default=text("now()")
     )
