@@ -17,10 +17,17 @@ async def get_session_messages(session_id: str, redis_client, db):
             logger.info("Cache hit for session %s", session_id)
             return messages
         except Exception:
-            logger.exception("Failed to deserialize cached session messages for %s", session_id)
+            logger.exception(
+                "Failed to deserialize cached session messages for %s", session_id
+            )
 
     # Cache miss: load from DB
-    stmt = select(Message).where(Message.session_id == session_id).order_by(Message.created_at.asc()).limit(10)
+    stmt = (
+        select(Message)
+        .where(Message.session_id == session_id)
+        .order_by(Message.created_at.asc())
+        .limit(10)
+    )
     result = await db.execute(stmt)
     rows = result.scalars().all()
     messages = [
