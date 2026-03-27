@@ -67,7 +67,9 @@ async def register(request: RegisterRequest, db: AsyncSession = Depends(get_db))
     await db.commit()
     await db.refresh(user)
 
-    return RegisterResponse(id=str(user.id), email=user.email.scalar_one(), role=str(user.role))
+    return RegisterResponse(
+        id=str(user.id), email=user.email.scalar_one(), role=str(user.role)
+    )
 
 
 @router.post("/login", response_model=LoginResponse)

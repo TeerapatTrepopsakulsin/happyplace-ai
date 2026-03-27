@@ -7,7 +7,6 @@ from sqlalchemy.orm import Mapped, mapped_column
 from app.models.base import Base
 
 
-
 class ChatbotGuidelines(Base):
     __tablename__ = "chatbot_guidelines"
 
@@ -19,7 +18,9 @@ class ChatbotGuidelines(Base):
     response_tone = Column(Text, nullable=True)
     coping_strategies = Column(Text, nullable=True)
     behavioral_boundaries = Column(Text, nullable=True)
-    sensitive_topics: Mapped[list[str] | None] = mapped_column(ARRAY(Text), nullable=True)
+    sensitive_topics: Mapped[list[str] | None] = mapped_column(
+        ARRAY(Text), nullable=True
+    )
     updated_at = Column(
         TIMESTAMP(timezone=True), nullable=False, server_default=text("now()")
     )
