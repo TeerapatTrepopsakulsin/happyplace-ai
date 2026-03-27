@@ -11,7 +11,7 @@ security = HTTPBearer()
 
 async def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(security),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ) -> User:
     token = credentials.credentials
     payload = decode_token(token)
@@ -46,4 +46,5 @@ def require_role(*allowed_roles: str):
                 detail="Insufficient permissions",
             )
         return user
+
     return role_checker
