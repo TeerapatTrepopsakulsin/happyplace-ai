@@ -2,7 +2,6 @@ from sqlalchemy import Column, ForeignKey, Text
 from sqlalchemy.dialects.postgresql import UUID, TIMESTAMP, ARRAY
 from sqlalchemy.sql import text
 from sqlalchemy.orm import Mapped, mapped_column
-from typing import List
 
 
 from app.models.base import Base
