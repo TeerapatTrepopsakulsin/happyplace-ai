@@ -65,7 +65,7 @@ export const useChatStore = defineStore('chat', {
       if (!this.activeSessionId) return
       const userMessage: Message = {
         id: `temp-${Date.now()}`,
-        role: 'user',
+        sender: 'user',
         content,
         created_at: new Date().toISOString(),
       }
