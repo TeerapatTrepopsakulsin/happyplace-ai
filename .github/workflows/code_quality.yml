@@ -5,8 +5,8 @@ on:
   pull_request:
 
 jobs:
-  cc-check:
-    name: Cyclomatic Complexity
+  code-quality:
+    name: Code Quality
     runs-on: ubuntu-latest
 
     steps:
@@ -16,16 +16,20 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Install radon
-        run: pip install radon
+      - name: Install tools
+        run: pip install radon ruff mypy bandit
 
-      - name: Check CC
-        run: |
-          radon cc backend/app/ -s -a
-          VIOLATIONS=$(radon cc backend/app/ -n C --no-assert -s)
-          if [ -n "$VIOLATIONS" ]; then
-            echo "CC violations found:"
-            echo "$VIOLATIONS"
-            exit 1
-          fi
-          echo "CC check passed!"
+      - name: CC Check
+        run: radon cc backend/app/ backend/workers -n C --no-assert -s || exit 1
+
+      - name: Ruff Lint
+        run: ruff check backend/app/ backend/workers
+
+      - name: Ruff Format
+        run: ruff format --check backend/app/ backend/workers
+
+      - name: Mypy Type Check
+        run: mypy backend/app/ backend/workers --ignore-missing-imports
+
+      - name: Bandit Security Check
+        run: bandit -r backend/app/ backend/workers -ll

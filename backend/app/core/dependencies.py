@@ -1,5 +1,3 @@
-from typing import List
-
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -13,7 +11,7 @@ security = HTTPBearer()
 
 async def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(security),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ) -> User:
     token = credentials.credentials
     payload = decode_token(token)
@@ -23,7 +21,7 @@ async def get_current_user(
             detail="Invalid authentication credentials",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    user_id: str = payload.get("sub")
+    user_id: str | None = payload.get("sub")
     if user_id is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -48,4 +46,5 @@ def require_role(*allowed_roles: str):
                 detail="Insufficient permissions",
             )
         return user
+
     return role_checker
