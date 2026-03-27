@@ -1,4 +1,4 @@
-from sqlalchemy import Column, ForeignKey, CheckConstraint, Text, UniqueConstraint
+from sqlalchemy import Column, ForeignKey, CheckConstraint, UniqueConstraint
 from sqlalchemy.dialects.postgresql import UUID, TIMESTAMP
 from sqlalchemy.sql import text
 
