@@ -25,7 +25,11 @@ def build_system_prompt(guidelines):
         response_tone = guidelines.response_tone or "Not specified"
         coping_strategies = guidelines.coping_strategies or "Not specified"
         behavioral_boundaries = guidelines.behavioral_boundaries or "Not specified"
-        sensitive_topics = ", ".join(guidelines.sensitive_topics) if guidelines.sensitive_topics else "Not specified"
+        sensitive_topics = (
+            ", ".join(guidelines.sensitive_topics)
+            if guidelines.sensitive_topics
+            else "Not specified"
+        )
         emotion_label = "unknown"
         emotion_score = "unknown"
 
@@ -50,18 +54,22 @@ async def get_conversation_history(session_id, redis, db):
     messages = await get_session_messages(session_id, redis, db)
     langchain_messages = []
     for msg in messages[-10:]:  # last 10 messages
-        if msg['sender'] == 'user':
-            langchain_messages.append(HumanMessage(content=msg['content']))
-        elif msg['sender'] == 'assistant':
-            langchain_messages.append(AIMessage(content=msg['content']))
+        if msg["sender"] == "user":
+            langchain_messages.append(HumanMessage(content=msg["content"]))
+        elif msg["sender"] == "assistant":
+            langchain_messages.append(AIMessage(content=msg["content"]))
     return langchain_messages
 
 
 async def call_groq(system_prompt, history, user_content):
-    model_name = os.getenv('GROQ_MODEL')
-    api_key = os.getenv('GROQ_API_KEY')
+    model_name = os.getenv("GROQ_MODEL")
+    api_key = os.getenv("GROQ_API_KEY")
     llm = ChatGroq(model=model_name, api_key=api_key)
-    messages = [SystemMessage(content=system_prompt)] + history + [HumanMessage(content=user_content)]
+    messages = (
+        [SystemMessage(content=system_prompt)]
+        + history
+        + [HumanMessage(content=user_content)]
+    )
     response = await llm.ainvoke(messages)
     return response.content
 
