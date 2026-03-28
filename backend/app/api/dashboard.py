@@ -1,5 +1,5 @@
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import select, func, and_, or_, desc, text
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy import select, func, and_, desc
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List
 from pydantic import BaseModel
@@ -62,7 +62,7 @@ class ProgressResponse(BaseModel):
 @router.get("/dashboard/patients", response_model=List[PatientSummary])
 async def get_patients(
     current_user: User = Depends(require_role("therapist", "guardian")),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     # Get patients who invited current user
     stmt = select(Invitation.sender_id).where(Invitation.invitee_id == current_user.id)
@@ -82,7 +82,9 @@ async def get_patients(
             continue
 
         # Get latest last_active
-        last_active_stmt = select(func.max(ChatSession.last_active)).where(ChatSession.user_id == patient_id)
+        last_active_stmt = select(func.max(ChatSession.last_active)).where(
+            ChatSession.user_id == patient_id
+        )
         last_active_result = await db.execute(last_active_stmt)
         last_active = last_active_result.scalar()
 
@@ -97,19 +99,25 @@ async def get_patients(
         emotion_result = await db.execute(emotion_stmt)
         latest_emotion = emotion_result.scalar()
 
-        patients.append(PatientSummary(
-            patient_id=str(patient_id),
-            display_name=patient.display_name,
-            last_active=last_active,
-            latest_emotion=latest_emotion
-        ))
+        patients.append(
+            PatientSummary(
+                patient_id=str(patient_id),
+                display_name=str(patient.display_name)
+                if patient.display_name
+                else None,
+                last_active=last_active,
+                latest_emotion=latest_emotion,
+            )
+        )
 
     return patients
 
 
 async def _verify_invitation(patient_id: str, current_user: User, db: AsyncSession):
     invitation_stmt = select(Invitation).where(
-        and_(Invitation.sender_id == patient_id, Invitation.invitee_id == current_user.id)
+        and_(
+            Invitation.sender_id == patient_id, Invitation.invitee_id == current_user.id
+        )
     )
     invitation_result = await db.execute(invitation_stmt)
     invitation = invitation_result.scalar_one_or_none()
@@ -141,48 +149,76 @@ def _calculate_mood_trend(summaries: List[DashboardSummary]) -> str:
     return "stable"
 
 
-@router.get("/dashboard/patients/{patient_id}/summary", response_model=DashboardSummaryResponse)
+@router.get(
+    "/dashboard/patients/{patient_id}/summary", response_model=DashboardSummaryResponse
+)
 async def get_patient_summary(
     patient_id: str,
     current_user: User = Depends(require_role("therapist", "guardian")),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     await _verify_invitation(patient_id, current_user, db)
 
     seven_days_ago = datetime.utcnow() - timedelta(days=7)
-    summaries_stmt = select(DashboardSummary).where(
-        and_(DashboardSummary.user_id == patient_id, DashboardSummary.summary_date >= seven_days_ago.date())
-    ).order_by(DashboardSummary.summary_date)
+    summaries_stmt = (
+        select(DashboardSummary)
+        .where(
+            and_(
+                DashboardSummary.user_id == patient_id,
+                DashboardSummary.summary_date >= seven_days_ago.date(),
+            )
+        )
+        .order_by(DashboardSummary.summary_date)
+    )
     summaries_result = await db.execute(summaries_stmt)
-    summaries = summaries_result.scalars().all()
+    summaries: list[DashboardSummary] = list(summaries_result.scalars().all())
 
     if not summaries:
         return DashboardSummaryResponse(
             mood_trend="stable",
             dominant_emotion_last_7d=None,
             session_count_last_7d=0,
-            danger_events_last_7d=0
+            danger_events_last_7d=0,
         )
 
     session_count_last_7d = sum(s.session_count for s in summaries)
     danger_events_last_7d = sum(s.danger_event_count for s in summaries)
 
     emotions = [s.dominant_emotion for s in summaries if s.dominant_emotion]
-    dominant_emotion_last_7d = max(set(emotions), key=emotions.count) if emotions else None
+    dominant_emotion_last_7d = None
+    if emotions:
+        from collections import Counter
+
+        emotion_counts = Counter(emotions)
+        max_count = max(emotion_counts.values())
+        candidates = [emotion for emotion, count in emotion_counts.items() if count == max_count]
+
+        if len(candidates) == 1:
+            dominant_emotion_last_7d = candidates[0]
+        else:
+            # If there is a tie, prefer the most recent dominant emotion from summaries
+            sorted_summaries = sorted(summaries, key=lambda s: s.summary_date, reverse=True)
+            for summary in sorted_summaries:
+                if summary.dominant_emotion in candidates:
+                    dominant_emotion_last_7d = summary.dominant_emotion
+                    break
+
     mood_trend = _calculate_mood_trend(summaries)
 
     return DashboardSummaryResponse(
         mood_trend=mood_trend,
-        dominant_emotion_last_7d=dominant_emotion_last_7d,
-        session_count_last_7d=session_count_last_7d,
-        danger_events_last_7d=danger_events_last_7d
+        dominant_emotion_last_7d=str(dominant_emotion_last_7d)
+        if dominant_emotion_last_7d
+        else None,
+        session_count_last_7d=int(session_count_last_7d),
+        danger_events_last_7d=int(danger_events_last_7d),
     )
 
 
 @router.get("/dashboard/alerts", response_model=List[AlertResponse])
 async def get_alerts(
     current_user: User = Depends(require_role("therapist")),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     # Get patients who invited current user
     stmt = select(Invitation.sender_id).where(Invitation.invitee_id == current_user.id)
@@ -193,9 +229,11 @@ async def get_alerts(
         return []
 
     # Get unresolved alerts for these patients
-    alerts_stmt = select(DangerAlert).where(
-        and_(DangerAlert.user_id.in_(patient_ids), DangerAlert.resolved == False)
-    ).order_by(desc(DangerAlert.created_at))
+    alerts_stmt = (
+        select(DangerAlert)
+        .where(and_(DangerAlert.user_id.in_(patient_ids), ~DangerAlert.resolved))
+        .order_by(desc(DangerAlert.created_at))
+    )
     alerts_result = await db.execute(alerts_stmt)
     alerts = alerts_result.scalars().all()
 
@@ -204,8 +242,8 @@ async def get_alerts(
             patient_id=str(alert.user_id),
             session_id=str(alert.session_id),
             message_id=str(alert.message_id),
-            snippet=alert.snippet,
-            created_at=alert.created_at
+            snippet=str(alert.snippet) if alert.snippet else None,
+            created_at=datetime.fromtimestamp(alert.created_at.timestamp()),
         )
         for alert in alerts
     ]
@@ -215,7 +253,7 @@ async def get_alerts(
 async def resolve_alert(
     alert_id: str,
     current_user: User = Depends(require_role("therapist")),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     # Get the alert
     alert_stmt = select(DangerAlert).where(DangerAlert.id == alert_id)
@@ -226,7 +264,10 @@ async def resolve_alert(
 
     # Verify the alert belongs to a patient who invited this therapist
     invitation_stmt = select(Invitation).where(
-        and_(Invitation.sender_id == alert.user_id, Invitation.invitee_id == current_user.id)
+        and_(
+            Invitation.sender_id == alert.user_id,
+            Invitation.invitee_id == current_user.id,
+        )
     )
     invitation_result = await db.execute(invitation_stmt)
     invitation = invitation_result.scalar_one_or_none()
@@ -240,11 +281,14 @@ async def resolve_alert(
     return AlertUpdateResponse(id=alert_id, resolved=True)
 
 
-@router.get("/patients/{patient_id}/emotion-history", response_model=List[EmotionHistoryResponse])
+@router.get(
+    "/patients/{patient_id}/emotion-history",
+    response_model=List[EmotionHistoryResponse],
+)
 async def get_emotion_history(
     patient_id: str,
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     # Check access
     if current_user.role == "regular" and str(current_user.id) != patient_id:
@@ -252,7 +296,10 @@ async def get_emotion_history(
     elif current_user.role in ["therapist", "guardian"]:
         # Verify invitation
         invitation_stmt = select(Invitation).where(
-            and_(Invitation.sender_id == patient_id, Invitation.invitee_id == current_user.id)
+            and_(
+                Invitation.sender_id == patient_id,
+                Invitation.invitee_id == current_user.id,
+            )
         )
         invitation_result = await db.execute(invitation_stmt)
         invitation = invitation_result.scalar_one_or_none()
@@ -261,7 +308,11 @@ async def get_emotion_history(
 
     # Get emotion history
     stmt = (
-        select(EmotionSnapshot.snapshot_at, EmotionSnapshot.dominant_emotion, EmotionSnapshot.average_score)
+        select(
+            EmotionSnapshot.snapshot_at,
+            EmotionSnapshot.dominant_emotion,
+            EmotionSnapshot.average_score,
+        )
         .join(ChatSession, EmotionSnapshot.session_id == ChatSession.id)
         .where(ChatSession.user_id == patient_id)
         .order_by(EmotionSnapshot.snapshot_at)
@@ -271,9 +322,7 @@ async def get_emotion_history(
 
     return [
         EmotionHistoryResponse(
-            snapshot_at=row[0],
-            dominant_emotion=row[1],
-            average_score=row[2]
+            snapshot_at=row[0], dominant_emotion=row[1], average_score=row[2]
         )
         for row in rows
     ]
@@ -283,14 +332,17 @@ async def get_emotion_history(
 async def get_progress(
     patient_id: str,
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     # Check access (same as above)
     if current_user.role == "regular" and str(current_user.id) != patient_id:
         raise HTTPException(status_code=403, detail="Access denied")
     elif current_user.role in ["therapist", "guardian"]:
         invitation_stmt = select(Invitation).where(
-            and_(Invitation.sender_id == patient_id, Invitation.invitee_id == current_user.id)
+            and_(
+                Invitation.sender_id == patient_id,
+                Invitation.invitee_id == current_user.id,
+            )
         )
         invitation_result = await db.execute(invitation_stmt)
         invitation = invitation_result.scalar_one_or_none()
@@ -298,18 +350,24 @@ async def get_progress(
             raise HTTPException(status_code=403, detail="Access denied")
 
     # Get progress
-    stmt = select(DashboardSummary).where(DashboardSummary.user_id == patient_id).order_by(DashboardSummary.summary_date)
+    stmt = (
+        select(DashboardSummary)
+        .where(DashboardSummary.user_id == patient_id)
+        .order_by(DashboardSummary.summary_date)
+    )
     result = await db.execute(stmt)
     summaries = result.scalars().all()
 
     return [
         ProgressResponse(
             summary_date=str(s.summary_date),
-            session_count=s.session_count,
-            total_messages=s.total_messages,
-            avg_emotion_score=s.avg_emotion_score,
-            dominant_emotion=s.dominant_emotion,
-            danger_event_count=s.danger_event_count
+            session_count=int(s.session_count),
+            total_messages=int(s.total_messages),
+            avg_emotion_score=float(s.avg_emotion_score)
+            if s.avg_emotion_score is not None
+            else None,
+            dominant_emotion=str(s.dominant_emotion) if s.dominant_emotion else None,
+            danger_event_count=int(s.danger_event_count),
         )
         for s in summaries
     ]

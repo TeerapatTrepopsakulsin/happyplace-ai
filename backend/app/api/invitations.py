@@ -4,7 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from pydantic import BaseModel
 from typing import List
 
-from app.core.dependencies import get_current_user, require_role
+from app.core.dependencies import require_role
 from app.db.session import get_db
 from app.models.users import User
 from app.models.invitations import Invitation
@@ -32,11 +32,15 @@ class InvitationListResponse(BaseModel):
     created_at: str  # datetime as string
 
 
-@router.post("/invitations", response_model=InvitationResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/invitations",
+    response_model=InvitationResponse,
+    status_code=status.HTTP_201_CREATED,
+)
 async def create_invitation(
     request: InvitationCreateRequest,
     current_user: User = Depends(require_role("regular")),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     # Look up user by email
     user_stmt = select(User).where(User.email == request.invitee_email)
@@ -47,16 +51,22 @@ async def create_invitation(
 
     # Check invitee role
     if invitee.role == "regular":
-        raise HTTPException(status_code=400, detail="Cannot invite a patient as a monitor")
+        raise HTTPException(
+            status_code=400, detail="Cannot invite a patient as a monitor"
+        )
 
     # Check if invitation already exists
     existing_stmt = select(Invitation).where(
-        and_(Invitation.sender_id == current_user.id, Invitation.invitee_id == invitee.id)
+        and_(
+            Invitation.sender_id == current_user.id, Invitation.invitee_id == invitee.id
+        )
     )
     existing_result = await db.execute(existing_stmt)
     existing = existing_result.scalar_one_or_none()
     if existing:
-        raise HTTPException(status_code=400, detail="This user has already been invited")
+        raise HTTPException(
+            status_code=400, detail="This user has already been invited"
+        )
 
     # Create invitation
     invitation = Invitation(sender_id=current_user.id, invitee_id=invitee.id)
@@ -66,20 +76,24 @@ async def create_invitation(
 
     return InvitationResponse(
         id=str(invitation.id),
-        invitee_email=invitee.email,
-        invitee_display_name=invitee.display_name,
-        role_granted=invitee.role,  # derived from invitee's role
-        created_at=str(invitation.created_at)
+        invitee_email=str(invitee.email),
+        invitee_display_name=str(invitee.display_name),
+        role_granted=str(invitee.role),  # derived from invitee's role
+        created_at=str(invitation.created_at),
     )
 
 
 @router.get("/invitations", response_model=List[InvitationListResponse])
 async def get_invitations(
     current_user: User = Depends(require_role("regular")),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     # Get all invitations sent by current user
-    stmt = select(Invitation, User).join(User, Invitation.invitee_id == User.id).where(Invitation.sender_id == current_user.id)
+    stmt = (
+        select(Invitation, User)
+        .join(User, Invitation.invitee_id == User.id)
+        .where(Invitation.sender_id == current_user.id)
+    )
     result = await db.execute(stmt)
     rows = result.fetchall()
 
@@ -89,7 +103,7 @@ async def get_invitations(
             invitee_email=user.email,
             invitee_display_name=user.display_name,
             role_granted=user.role,
-            created_at=str(invitation.created_at)
+            created_at=str(invitation.created_at),
         )
         for invitation, user in rows
     ]
@@ -99,7 +113,7 @@ async def get_invitations(
 async def delete_invitation(
     invitation_id: str,
     current_user: User = Depends(require_role("regular")),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     # Get the invitation
     stmt = select(Invitation).where(Invitation.id == invitation_id)
@@ -113,5 +127,5 @@ async def delete_invitation(
         raise HTTPException(status_code=403, detail="Access denied")
 
     # Delete
-    db.delete(invitation)
+    await db.delete(invitation)
     await db.commit()

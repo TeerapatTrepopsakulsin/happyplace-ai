@@ -1,10 +1,10 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select, and_, text
 from sqlalchemy.ext.asyncio import AsyncSession
 from pydantic import BaseModel
 from typing import List
 
-from app.core.dependencies import get_current_user, require_role
+from app.core.dependencies import require_role
 from app.db.session import get_db
 from app.models.users import User
 from app.models.invitations import Invitation
@@ -35,11 +35,13 @@ class GuidelinesUpdateRequest(BaseModel):
 async def get_guidelines(
     patient_id: str,
     current_user: User = Depends(require_role("therapist")),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     # Verify invitation
     invitation_stmt = select(Invitation).where(
-        and_(Invitation.sender_id == patient_id, Invitation.invitee_id == current_user.id)
+        and_(
+            Invitation.sender_id == patient_id, Invitation.invitee_id == current_user.id
+        )
     )
     invitation_result = await db.execute(invitation_stmt)
     invitation = invitation_result.scalar_one_or_none()
@@ -57,11 +59,19 @@ async def get_guidelines(
         id=str(guidelines.id),
         patient_id=str(guidelines.user_id),
         authored_by=str(guidelines.authored_by),
-        response_tone=guidelines.response_tone,
-        coping_strategies=guidelines.coping_strategies,
-        behavioral_boundaries=guidelines.behavioral_boundaries,
-        sensitive_topics=guidelines.sensitive_topics,
-        updated_at=str(guidelines.updated_at)
+        response_tone=str(guidelines.response_tone)
+        if guidelines.response_tone
+        else None,
+        coping_strategies=str(guidelines.coping_strategies)
+        if guidelines.coping_strategies
+        else None,
+        behavioral_boundaries=str(guidelines.behavioral_boundaries)
+        if guidelines.behavioral_boundaries
+        else None,
+        sensitive_topics=[str(topic) for topic in guidelines.sensitive_topics]
+        if guidelines.sensitive_topics
+        else None,
+        updated_at=str(guidelines.updated_at),
     )
 
 
@@ -70,11 +80,13 @@ async def update_guidelines(
     patient_id: str,
     request: GuidelinesUpdateRequest,
     current_user: User = Depends(require_role("therapist")),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     # Verify invitation
     invitation_stmt = select(Invitation).where(
-        and_(Invitation.sender_id == patient_id, Invitation.invitee_id == current_user.id)
+        and_(
+            Invitation.sender_id == patient_id, Invitation.invitee_id == current_user.id
+        )
     )
     invitation_result = await db.execute(invitation_stmt)
     invitation = invitation_result.scalar_one_or_none()
@@ -90,18 +102,18 @@ async def update_guidelines(
         response_tone=request.response_tone,
         coping_strategies=request.coping_strategies,
         behavioral_boundaries=request.behavioral_boundaries,
-        sensitive_topics=request.sensitive_topics
+        sensitive_topics=request.sensitive_topics,
     )
     upsert_stmt = insert_stmt.on_conflict_do_update(
-        index_elements=['user_id'],
+        index_elements=["user_id"],
         set_={
-            'authored_by': str(current_user.id),
-            'response_tone': request.response_tone,
-            'coping_strategies': request.coping_strategies,
-            'behavioral_boundaries': request.behavioral_boundaries,
-            'sensitive_topics': request.sensitive_topics,
-            'updated_at': text('now()')
-        }
+            "authored_by": str(current_user.id),
+            "response_tone": request.response_tone,
+            "coping_strategies": request.coping_strategies,
+            "behavioral_boundaries": request.behavioral_boundaries,
+            "sensitive_topics": request.sensitive_topics,
+            "updated_at": text("now()"),
+        },
     )
     await db.execute(upsert_stmt)
     await db.commit()
@@ -115,9 +127,17 @@ async def update_guidelines(
         id=str(guidelines.id),
         patient_id=str(guidelines.user_id),
         authored_by=str(guidelines.authored_by),
-        response_tone=guidelines.response_tone,
-        coping_strategies=guidelines.coping_strategies,
-        behavioral_boundaries=guidelines.behavioral_boundaries,
-        sensitive_topics=guidelines.sensitive_topics,
-        updated_at=str(guidelines.updated_at)
+        response_tone=str(guidelines.response_tone)
+        if guidelines.response_tone
+        else None,
+        coping_strategies=str(guidelines.coping_strategies)
+        if guidelines.coping_strategies
+        else None,
+        behavioral_boundaries=str(guidelines.behavioral_boundaries)
+        if guidelines.behavioral_boundaries
+        else None,
+        sensitive_topics=[str(topic) for topic in guidelines.sensitive_topics]
+        if guidelines.sensitive_topics
+        else None,
+        updated_at=str(guidelines.updated_at),
     )

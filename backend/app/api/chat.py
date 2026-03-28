@@ -203,7 +203,7 @@ async def send_message(
         "session_id": session_id,
         "patient_id": str(current_user.id),
         "content": user_msg.content,
-        "sender": "user"
+        "sender": "user",
     }
     await publish_message_created(redis_client, payload)
 

@@ -229,7 +229,7 @@ async def test_delete_invitation_success(mock_db, mock_patient, mock_invitation)
     mock_db.execute.return_value = mock_result
 
     # Mock delete and commit
-    mock_db.delete = MagicMock()
+    mock_db.delete = AsyncMock()
     mock_db.commit = AsyncMock()
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
