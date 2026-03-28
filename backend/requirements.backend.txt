@@ -2,3 +2,9 @@ fastapi
 uvicorn
 python-jose[cryptography]
 bcrypt
+langchain
+langchain-groq
+langchain-core
+pytest
+httpx
+pytest-asyncio
