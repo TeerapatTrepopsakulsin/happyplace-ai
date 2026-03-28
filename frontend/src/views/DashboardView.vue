@@ -31,7 +31,6 @@ watch(
     await dashboard.fetchProgress(id)
     if (auth.isTherapist) {
       await dashboard.fetchGuidelines(id)
-      await dashboard.fetchPatientSessions(id)
     }
   }
 )
@@ -52,29 +51,18 @@ async function saveGuidelines(data: any) {
   if (!dashboard.selectedPatientId) return
   await dashboard.updateGuidelines(dashboard.selectedPatientId, data)
 }
-
-async function selectPatientSession(sessionId: string) {
-  dashboard.selectPatientSession(sessionId)
-  await dashboard.fetchPatientMessages(sessionId)
-}
 </script>
 
 <template>
   <div>
-    <div v-if="!dashboard.hasSelection">
-      <div v-if="!dashboard.patients.length" class="bg-white p-6 rounded-lg border text-center">
-        <h3 class="text-lg font-semibold mb-2">No patients yet</h3>
-        <p class="text-gray-600">You have no linked patients currently. Ask patients to invite you so they appear here.</p>
-      </div>
-      <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        <PatientCard
-          v-for="patient in dashboard.patients"
-          :key="patient.patient_id"
-          :patient="patient"
-          :active="false"
-          @select="selectPatient"
-        />
-      </div>
+    <div v-if="!dashboard.hasSelection" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <PatientCard
+        v-for="patient in dashboard.patients"
+        :key="patient.patient_id"
+        :patient="patient"
+        :active="false"
+        @select="selectPatient"
+      />
     </div>
 
     <div v-else class="space-y-4">
@@ -106,10 +94,10 @@ async function selectPatientSession(sessionId: string) {
 
       <div v-if="auth.isTherapist" class="mt-4">
         <ChatLogViewer
-          :sessions="dashboard.patientSessions"
-          :activeSessionId="dashboard.selectedSessionId"
-          :messages="dashboard.patientMessages"
-          :onSessionSelect="selectPatientSession"
+          :sessions="[]"
+          :activeSessionId="null"
+          :messages="[]"
+          :onSessionSelect="() => {}"
         />
       </div>
     </div>

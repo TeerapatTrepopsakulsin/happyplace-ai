@@ -9,9 +9,9 @@ export interface User {
 
 export interface Session {
   id: string
-  title: string | null
+  title: string
   created_at: string
-  last_active: string | null
+  last_active: string
 }
 
 export interface Message {

@@ -13,9 +13,6 @@ interface State {
   invitations: Invitation[]
   emotionHistory: Array<{ snapshot_at: string; dominant_emotion: string; average_score: number }>
   progress: Array<{ metric_date: string; session_count: number; avg_emotion_score?: number; dominant_emotion?: string; danger_event_count?: number }>
-  patientSessions: Session[]
-  patientMessages: Message[]
-  selectedSessionId: string | null
 }
 
 export const useDashboardStore = defineStore('dashboard', {
@@ -30,9 +27,6 @@ export const useDashboardStore = defineStore('dashboard', {
     invitations: [],
     emotionHistory: [],
     progress: [],
-    patientSessions: [],
-    patientMessages: [],
-    selectedSessionId: null,
   }),
   getters: {
     selectedPatient(state) {
@@ -64,9 +58,6 @@ export const useDashboardStore = defineStore('dashboard', {
       this.selectedPatientId = null
       this.summary = null
       this.guidelines = null
-      this.patientSessions = []
-      this.patientMessages = []
-      this.selectedSessionId = null
     },
     async fetchAlerts() {
       this.loading = true
@@ -197,41 +188,6 @@ export const useDashboardStore = defineStore('dashboard', {
       } finally {
         this.loading = false
       }
-    },
-    async fetchPatientSessions(patientId: string) {
-      if (!patientId) return
-      this.loading = true
-      this.error = null
-      try {
-        const res = await client.get(`/dashboard/patients/${patientId}/sessions`)
-        this.patientSessions = res.data
-        return this.patientSessions
-      } catch (err: any) {
-        this.error = err.response?.data?.detail || 'Failed to fetch patient sessions'
-      } finally {
-        this.loading = false
-      }
-    },
-    async fetchPatientMessages(sessionId: string) {
-      if (!sessionId) return
-      this.loading = true
-      this.error = null
-      try {
-        const res = await client.get(`/chat/sessions/${sessionId}/messages`)
-        this.patientMessages = res.data
-        return this.patientMessages
-      } catch (err: any) {
-        this.error = err.response?.data?.detail || 'Failed to fetch patient messages'
-      } finally {
-        this.loading = false
-      }
-    },
-    selectPatientSession(sessionId: string) {
-      this.selectedSessionId = sessionId
-    },
-    clearPatientSession() {
-      this.selectedSessionId = null
-      this.patientMessages = []
     },
   },
 })
