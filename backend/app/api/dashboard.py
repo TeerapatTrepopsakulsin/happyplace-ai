@@ -191,13 +191,17 @@ async def get_patient_summary(
 
         emotion_counts = Counter(emotions)
         max_count = max(emotion_counts.values())
-        candidates = [emotion for emotion, count in emotion_counts.items() if count == max_count]
+        candidates = [
+            emotion for emotion, count in emotion_counts.items() if count == max_count
+        ]
 
         if len(candidates) == 1:
             dominant_emotion_last_7d = candidates[0]
         else:
             # If there is a tie, prefer the most recent dominant emotion from summaries
-            sorted_summaries = sorted(summaries, key=lambda s: s.summary_date, reverse=True)
+            sorted_summaries = sorted(
+                summaries, key=lambda s: s.summary_date, reverse=True
+            )
             for summary in sorted_summaries:
                 if summary.dominant_emotion in candidates:
                     dominant_emotion_last_7d = summary.dominant_emotion
