@@ -53,7 +53,7 @@ onMounted(async () => {
           :class="['cursor-pointer p-2 rounded', chat.activeSessionId === sess.id ? 'bg-blue-100' : 'hover:bg-gray-100']"
         >
           <div class="font-medium">{{ sess.title || 'Conversation' }}</div>
-          <div class="text-xs text-gray-500">{{ new Date(sess.last_active).toLocaleString() }}</div>
+          <div class="text-xs text-gray-500">{{ sess.last_active ? new Date(sess.last_active).toLocaleString() : 'Never' }}</div>
         </li>
       </ul>
     </aside>

@@ -18,7 +18,7 @@ const props = defineProps<{ sessions: Session[]; activeSessionId: string | null;
           @click="props.onSessionSelect(sess.id)"
         >
           <div class="text-sm font-medium">{{ sess.title || 'Session' }}</div>
-          <div class="text-xs text-gray-500">{{ new Date(sess.last_active).toLocaleDateString() }}</div>
+          <div class="text-xs text-gray-500">{{ sess.last_active ? new Date(sess.last_active).toLocaleDateString() : 'Never' }}</div>
         </li>
       </ul>
     </div>
