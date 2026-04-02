@@ -53,7 +53,14 @@ async def analyse_emotion(content: str) -> dict:
 
     prompt = (
         """
-Classify the emotion in the following text. Respond only with a JSON object with keys \"emotion_label\" and \"emotion_score\". No other text.
+Analyze the emotional state expressed in the following text. Classify it with one of these emotion labels: happy, sad, anxious, angry, neutral, distressed.
+
+Provide a score from 0.0 to 1.0 where:
+- 1.0 = very happy/positive
+- 0.5 = neutral
+- 0.0 = very sad/distressed/negative
+
+Respond only with valid JSON: {"emotion_label": "label", "emotion_score": 0.5}
 
 Text: %s
 """
