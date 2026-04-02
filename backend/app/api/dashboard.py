@@ -20,7 +20,7 @@ router = APIRouter()
 class PatientSummary(BaseModel):
     patient_id: str
     display_name: str | None
-    last_active: datetime | None
+    last_active: str | None  # ISO format string or None
     latest_emotion: str | None
 
 
@@ -32,6 +32,7 @@ class DashboardSummaryResponse(BaseModel):
 
 
 class AlertResponse(BaseModel):
+    id: str
     patient_id: str
     session_id: str
     message_id: str
@@ -105,7 +106,7 @@ async def get_patients(
                 display_name=str(patient.display_name)
                 if patient.display_name
                 else None,
-                last_active=last_active,
+                last_active=last_active.isoformat() if last_active else None,
                 latest_emotion=latest_emotion,
             )
         )
@@ -243,6 +244,7 @@ async def get_alerts(
 
     return [
         AlertResponse(
+            id=str(alert.id),
             patient_id=str(alert.user_id),
             session_id=str(alert.session_id),
             message_id=str(alert.message_id),

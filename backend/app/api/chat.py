@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import select, desc
+from sqlalchemy import select, desc, and_
 from sqlalchemy.ext.asyncio import AsyncSession
 from pydantic import BaseModel
 from typing import List
@@ -58,6 +58,44 @@ async def get_sessions(
     stmt = (
         select(ChatSession)
         .where(ChatSession.user_id == current_user.id)
+        .order_by(desc(ChatSession.last_active))
+    )
+    result = await db.execute(stmt)
+    sessions = result.scalars().all()
+    return [
+        SessionResponse(
+            id=str(s.id),
+            title=str(s.title),
+            created_at=s.created_at.isoformat(),
+            last_active=s.last_active.isoformat() if s.last_active else None,
+        )
+        for s in sessions
+    ]
+
+
+@router.get("/patients/{patient_id}/sessions", response_model=List[SessionResponse])
+async def get_patient_sessions(
+    patient_id: str,
+    current_user: User = Depends(require_role("therapist", "guardian")),
+    db: AsyncSession = Depends(get_db),
+):
+    """Get sessions for a patient (requires therapist/guardian access)"""
+    # Check if current user has access to this patient
+    if current_user.role in ["therapist", "guardian"]:
+        invitation_stmt = select(Invitation).where(
+            and_(
+                Invitation.sender_id == patient_id,
+                Invitation.invitee_id == current_user.id,
+            )
+        )
+        invitation_result = await db.execute(invitation_stmt)
+        invitation = invitation_result.scalar_one_or_none()
+        if not invitation:
+            raise HTTPException(status_code=403, detail="Access denied")
+
+    stmt = (
+        select(ChatSession)
+        .where(ChatSession.user_id == patient_id)
         .order_by(desc(ChatSession.last_active))
     )
     result = await db.execute(stmt)
@@ -188,11 +226,20 @@ async def send_message(
     )
     db.add(assistant_msg)
 
-    # Update session last_active
-    session.last_active = assistant_msg.created_at
-
     await db.commit()
     await db.refresh(assistant_msg)
+
+    # Update session last_active using the resolved assistant message timestamp
+    if assistant_msg.created_at:
+        session.last_active = assistant_msg.created_at
+    else:
+        from datetime import datetime
+
+        session.last_active = datetime.utcnow()
+
+    db.add(session)
+    await db.commit()
+    await db.refresh(session)
 
     # 7. Update session cache
     await update_session_cache(session_id, redis_client, db)
@@ -214,7 +261,9 @@ async def send_message(
             sender=str(user_msg.sender),
             content=str(user_msg.content),
             emotion_label=str(user_msg.emotion_label),
-            emotion_score=float(user_msg.emotion_score),
+            emotion_score=float(user_msg.emotion_score)
+            if user_msg.emotion_score is not None
+            else None,
             danger_flag=bool(user_msg.danger_flag),
             created_at=user_msg.created_at.isoformat(),
         ),
@@ -223,7 +272,7 @@ async def send_message(
             sender=str(assistant_msg.sender),
             content=str(assistant_msg.content),
             emotion_label=str(assistant_msg.emotion_label),
-            emotion_score=float(assistant_msg.emotion_score),
+            emotion_score=0.0,
             danger_flag=bool(assistant_msg.danger_flag),
             created_at=assistant_msg.created_at.isoformat(),
         ),
