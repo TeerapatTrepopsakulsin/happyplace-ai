@@ -60,4 +60,5 @@ export interface Guidelines {
   coping_strategies?: string
   behavioral_boundaries?: string
   sensitive_topics?: string[]
+  updated_at?: string
 }

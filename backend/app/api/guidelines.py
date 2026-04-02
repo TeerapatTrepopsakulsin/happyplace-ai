@@ -53,7 +53,18 @@ async def get_guidelines(
     result = await db.execute(stmt)
     guidelines = result.scalar_one_or_none()
     if not guidelines:
-        raise HTTPException(status_code=404, detail="Guidelines not found")
+        # No saved guideline yet for this user; initialize a record to ensure the client can retrieve/update it consistently.
+        guidelines = ChatbotGuidelines(
+            user_id=patient_id,
+            authored_by=current_user.id,
+            response_tone=None,
+            coping_strategies=None,
+            behavioral_boundaries=None,
+            sensitive_topics=[],
+        )
+        db.add(guidelines)
+        await db.commit()
+        await db.refresh(guidelines)
 
     return GuidelinesResponse(
         id=str(guidelines.id),

@@ -1,4 +1,4 @@
-from sqlalchemy import Column, ForeignKey, Text
+from sqlalchemy import Column, ForeignKey, Text, UniqueConstraint
 from sqlalchemy.dialects.postgresql import UUID, TIMESTAMP, ARRAY
 from sqlalchemy.sql import text
 from sqlalchemy.orm import Mapped, mapped_column
@@ -9,6 +9,9 @@ from app.models.base import Base
 
 class ChatbotGuidelines(Base):
     __tablename__ = "chatbot_guidelines"
+    __table_args__ = (
+        UniqueConstraint("user_id", name="uq_chatbot_guidelines_user_id"),
+    )
 
     id = Column(
         UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()")
