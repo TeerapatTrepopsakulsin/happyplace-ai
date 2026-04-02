@@ -26,7 +26,6 @@ async def get_session_messages(session_id: str, redis_client, db):
         select(Message)
         .where(Message.session_id == session_id)
         .order_by(Message.created_at.asc())
-        .limit(10)
     )
     result = await db.execute(stmt)
     rows = result.scalars().all()

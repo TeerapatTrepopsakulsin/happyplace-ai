@@ -1,5 +1,9 @@
 import logging
 
+# Import all models to ensure they are registered with SQLAlchemy
+import app.models  # noqa: F401
+import asyncio
+
 from workers.base import WorkerBase
 from app.events.handlers import handle_danger, handle_emotion
 
@@ -14,7 +18,7 @@ class AnalysisWorker(WorkerBase):
 
 def main():
     worker = AnalysisWorker(channel="message.created")
-    worker.run()
+    asyncio.run(worker.run())
 
 
 if __name__ == "__main__":
