@@ -87,7 +87,7 @@ function revoke(id: string) {
             <div class="font-semibold">{{ invite.invitee_display_name }}</div>
             <div class="text-xs text-gray-500">{{ invite.invitee_email }} • {{ invite.role_granted }}</div>
           </div>
-          <button class="text-red-600 text-xs" @click="revoke(invite.id)">Revoke</button>
+          <button class="text-red-600 text-xs font-bold" @click="revoke(invite.id)" aria-label="Revoke invitation">✕</button>
         </li>
       </ul>
     </section>

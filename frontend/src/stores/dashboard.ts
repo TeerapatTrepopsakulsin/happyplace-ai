@@ -2,31 +2,21 @@ import { defineStore } from 'pinia'
 import client from '../api/client'
 import type { Alert, Guidelines, Invitation, PatientCardModel, PatientSummary, Session, Message } from '../types'
 
-interface State {
-  patients: PatientCardModel[]
-  selectedPatientId: string | null
-  alerts: Alert[]
-  loading: boolean
-  error: string | null
-  summary: PatientSummary | null
-  guidelines: Guidelines | null
-  invitations: Invitation[]
-  emotionHistory: Array<{ snapshot_at: string; dominant_emotion: string; average_score: number }>
-  progress: Array<{ metric_date: string; session_count: number; avg_emotion_score?: number; dominant_emotion?: string; danger_event_count?: number }>
-}
-
 export const useDashboardStore = defineStore('dashboard', {
-  state: (): State => ({
-    patients: [],
-    selectedPatientId: null,
-    alerts: [],
+  state: () => ({
+    patients: [] as PatientCardModel[],
+    selectedPatientId: (localStorage.getItem('dashboard_selectedPatientId') || null) as string | null,
+    alerts: [] as Alert[],
     loading: false,
-    error: null,
-    summary: null,
-    guidelines: null,
-    invitations: [],
-    emotionHistory: [],
-    progress: [],
+    error: null as string | null,
+    summary: null as PatientSummary | null,
+    guidelines: (JSON.parse(localStorage.getItem('dashboard_guidelines') || 'null') as Guidelines | null),
+    invitations: [] as Invitation[],
+    emotionHistory: [] as Array<{ snapshot_at: string; dominant_emotion: string; average_score: number }>,
+    progress: [] as Array<{ summary_date: string; session_count: number; avg_emotion_score: number | null; dominant_emotion: string | null; danger_event_count: number }>,
+    sessions: [] as Session[],
+    selectedSessionId: null as string | null,
+    messages: [] as Message[],
   }),
   getters: {
     selectedPatient(state) {
@@ -51,11 +41,13 @@ export const useDashboardStore = defineStore('dashboard', {
     },
     selectPatient(id: string) {
       this.selectedPatientId = id
+      localStorage.setItem('dashboard_selectedPatientId', id)
       this.summary = null
       this.guidelines = null
     },
     clearSelection() {
       this.selectedPatientId = null
+      localStorage.removeItem('dashboard_selectedPatientId')
       this.summary = null
       this.guidelines = null
     },
@@ -129,9 +121,17 @@ export const useDashboardStore = defineStore('dashboard', {
       try {
         const res = await client.get(`/guidelines/${patientId}`)
         this.guidelines = res.data
+        localStorage.setItem('dashboard_guidelines', JSON.stringify(this.guidelines))
       } catch (err: any) {
         if (err.response?.status === 404) {
-          this.guidelines = null
+          this.guidelines = {
+            response_tone: '',
+            coping_strategies: '',
+            behavioral_boundaries: '',
+            sensitive_topics: [],
+            updated_at: new Date().toISOString(),
+          }
+          localStorage.removeItem('dashboard_guidelines')
         } else {
           this.error = err.response?.data?.detail || 'Failed to fetch guidelines'
         }
@@ -146,8 +146,40 @@ export const useDashboardStore = defineStore('dashboard', {
       try {
         const res = await client.put(`/guidelines/${patientId}`, payload)
         this.guidelines = res.data
+        localStorage.setItem('dashboard_guidelines', JSON.stringify(this.guidelines))
       } catch (err: any) {
         this.error = err.response?.data?.detail || 'Failed to update guidelines'
+      } finally {
+        this.loading = false
+      }
+    },
+    async fetchSessions(patientId: string) {
+      if (!patientId) return
+      this.loading = true
+      this.error = null
+      try {
+        const res = await client.get(`/chat/patients/${patientId}/sessions`)
+        this.sessions = res.data
+      } catch (err: any) {
+        this.error = err.response?.data?.detail || 'Failed to fetch sessions'
+      } finally {
+        this.loading = false
+      }
+    },
+    async selectSession(sessionId: string) {
+      this.selectedSessionId = sessionId
+      this.messages = []
+      await this.fetchMessages(sessionId)
+    },
+    async fetchMessages(sessionId: string) {
+      if (!sessionId) return
+      this.loading = true
+      this.error = null
+      try {
+        const res = await client.get(`/chat/sessions/${sessionId}/messages`)
+        this.messages = res.data
+      } catch (err: any) {
+        this.error = err.response?.data?.detail || 'Failed to fetch messages'
       } finally {
         this.loading = false
       }

@@ -17,6 +17,5 @@ const emit = defineEmits<{
   >
     <div class="font-semibold">{{ props.patient.display_name }}</div>
     <div class="text-xs text-gray-500">Last active: {{ new Date(props.patient.last_active).toLocaleString() }}</div>
-    <div class="mt-1 text-xs">Latest emotion: {{ props.patient.latest_emotion || 'N/A' }}</div>
   </button>
 </template>

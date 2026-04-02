@@ -13,7 +13,6 @@ const props = defineProps<{ sender: Sender; content: string; emotion_label?: str
       ]"
     >
       <p class="whitespace-pre-wrap text-sm">{{ content }}</p>
-      <p v-if="emotion_label" class="text-xs mt-1 opacity-80">Emotion: {{ emotion_label }}</p>
     </div>
   </div>
 </template>

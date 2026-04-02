@@ -5,10 +5,10 @@ import { computed } from 'vue'
 
 Chart.register(...registerables)
 
-const props = defineProps<{ emotionHistory: Array<{ snapshot_at: string; average_score: number; dominant_emotion: string }> }>()
+const props = defineProps<{ progressData: Array<{ summary_date: string; avg_emotion_score: number | null; dominant_emotion: string | null }> }>()
 
-const labels = computed(() => props.emotionHistory.map((entry) => new Date(entry.snapshot_at).toLocaleDateString()))
-const scores = computed(() => props.emotionHistory.map((entry) => entry.average_score))
+const labels = computed(() => props.progressData.map((entry) => new Date(entry.summary_date).toLocaleDateString()))
+const scores = computed(() => props.progressData.map((entry) => entry.avg_emotion_score || 0))
 
 const chartData = computed(() => ({
   labels: labels.value,
@@ -28,6 +28,13 @@ const chartOptions = {
   responsive: true,
   maintainAspectRatio: false,
   scales: {
+    x: {
+      ticks: {
+        maxRotation: 45,
+        minRotation: 0,
+        autoSkipPadding: 30,
+      },
+    },
     y: {
       min: 0,
       max: 1,
@@ -37,9 +44,9 @@ const chartOptions = {
 </script>
 
 <template>
-  <div class="bg-white border rounded-lg p-4 min-h-[240px]">
+  <div class="bg-white border rounded-lg p-4 h-[240px] overflow-hidden">
     <h4 class="font-semibold mb-2">Mood Chart</h4>
-    <div v-if="props.emotionHistory?.length === 0" class="text-center py-16 text-gray-500">No emotion history yet.</div>
+    <div v-if="props.progressData?.length === 0" class="text-center py-16 text-gray-500">No progress data yet.</div>
     <Line v-else :data="chartData" :options="chartOptions" />
   </div>
 </template>

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { onMounted, ref, nextTick, computed } from 'vue'
 import { useChatStore } from '../stores/chat'
 import { useAuthStore } from '../stores/auth'
 import MessageBubble from '../components/MessageBubble.vue'
@@ -8,6 +8,15 @@ import EmotionBadge from '../components/EmotionBadge.vue'
 const chat = useChatStore()
 const auth = useAuthStore()
 const newMessage = ref('')
+const messagesContainer = ref<HTMLElement>()
+const sidebarOpen = ref(true)
+
+const containerClass = computed(() => (sidebarOpen.value ? 'grid grid-cols-1 lg:grid-cols-4 gap-4' : 'grid grid-cols-1 gap-4'))
+const sidebarClass = computed(() => (sidebarOpen.value ? 'block' : 'hidden'))
+
+function toggleSidebar() {
+  sidebarOpen.value = !sidebarOpen.value
+}
 
 async function select(sessionId: string) {
   await chat.selectSession(sessionId)
@@ -19,10 +28,16 @@ async function createConversation() {
 
 async function send() {
   if (!newMessage.value.trim()) return
+  const message = newMessage.value.trim()
+  newMessage.value = ''
   try {
-    await chat.sendMessage(newMessage.value.trim())
-    newMessage.value = ''
+    await chat.sendMessage(message)
+    await nextTick()
+    if (messagesContainer.value) {
+      messagesContainer.value.scrollTop = messagesContainer.value.scrollHeight
+    }
   } catch (e) {
+    newMessage.value = message // restore on error
     // error displayed via store
   }
 }
@@ -30,16 +45,26 @@ async function send() {
 onMounted(async () => {
   if (!auth.isRegular) return
   await chat.fetchSessions()
-  if (chat.sessions.length > 0) {
+  if (chat.sessions.length === 0) {
+    await createConversation()
+  } else {
     await select(chat.sessions[0]!.id)
   }
 })
 </script>
 
 <template>
-  <div class="grid grid-cols-1 lg:grid-cols-4 gap-4">
-    <aside class="lg:col-span-1 bg-white border rounded-lg p-4">
+  <div :class="containerClass">
+    <aside :class="[sidebarClass, 'lg:col-span-1 bg-white border rounded-lg p-4']">
       <div class="flex justify-between items-center mb-3">
+        <button
+          @click="toggleSidebar"
+          class="text-base px-2 py-1 bg-gray-200 rounded"
+          aria-label="Close session sidebar"
+        >
+          <span v-if="sidebarOpen">‹</span>
+          <span v-else>›</span>
+        </button>
         <h2 class="text-lg font-semibold">Sessions</h2>
         <button @click="createConversation" class="px-2 py-1 bg-blue-500 text-white rounded text-sm">New</button>
       </div>
@@ -60,7 +85,7 @@ onMounted(async () => {
 
     <section class="lg:col-span-3 bg-white border rounded-lg p-4 flex flex-col h-[75vh]">
       <h2 class="text-lg font-semibold mb-3">Chat</h2>
-      <div class="flex-1 overflow-auto space-y-2 mb-4">
+      <div ref="messagesContainer" class="flex-1 overflow-auto space-y-2 mb-4">
         <div v-if="!chat.activeSessionId" class="text-gray-500 mt-10">Select or create a session to start chatting.</div>
         <div v-else-if="chat.messages.length === 0" class="text-gray-500 mt-10">No messages yet.</div>
         <div v-else class="space-y-1">

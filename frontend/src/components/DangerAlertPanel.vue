@@ -5,7 +5,15 @@ const props = defineProps<{ alerts: Alert[] }>()
 const emit = defineEmits<{
   (e: 'resolve', id: string): void
 }>()
-</script>
+
+function handleResolve(alert: Alert) {
+  console.log('Resolving alert:', alert)
+  if (!alert.id || alert.id === 'undefined') {
+    console.error('Invalid alert ID:', alert.id)
+    return
+  }
+  emit('resolve', alert.id)
+}</script>
 
 <template>
   <div class="bg-white border rounded-lg p-4">
@@ -15,7 +23,9 @@ const emit = defineEmits<{
       <li v-for="alert in props.alerts" :key="alert.id" class="p-3 bg-red-50 rounded">
         <div class="text-sm text-red-800">{{ alert.snippet }}</div>
         <div class="text-xs text-gray-500 mt-1">{{ new Date(alert.created_at).toLocaleString() }}</div>
-        <button @click="emit('resolve', alert.id)" class="mt-2 text-xs text-white bg-red-500 px-2 py-1 rounded">Resolve</button>
+        <button @click="handleResolve(alert)" class="mt-2 text-xs text-white bg-red-500 px-2 py-1 rounded" :disabled="!alert.id || alert.id === 'undefined'">
+          Resolve
+        </button>
       </li>
     </ul>
   </div>
