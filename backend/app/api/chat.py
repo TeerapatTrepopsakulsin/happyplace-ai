@@ -144,7 +144,7 @@ async def update_session(
     session = await db.get(ChatSession, session_id)
     if not session or session.user_id != current_user.id:
         raise HTTPException(status_code=403, detail="Access denied")
-    session.title = request.title
+    session.title = request.title  # type: ignore[assignment]
     db.add(session)
     await db.commit()
     await db.refresh(session)
@@ -275,9 +275,9 @@ async def send_message(
     if assistant_msg.created_at:
         session.last_active = assistant_msg.created_at
     else:
-        from datetime import datetime
+        from datetime import datetime, timezone
 
-        session.last_active = datetime.utcnow()
+        session.last_active = datetime.now(timezone.utc).replace(tzinfo=None)  # type: ignore[assignment]
 
     db.add(session)
     await db.commit()

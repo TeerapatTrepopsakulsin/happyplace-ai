@@ -46,7 +46,8 @@ async def get_guidelines(
     else:
         invitation_stmt = select(Invitation).where(
             and_(
-                Invitation.sender_id == patient_id, Invitation.invitee_id == current_user.id
+                Invitation.sender_id == patient_id,
+                Invitation.invitee_id == current_user.id,
             )
         )
         invitation_result = await db.execute(invitation_stmt)
@@ -108,7 +109,8 @@ async def update_guidelines(
     else:
         invitation_stmt = select(Invitation).where(
             and_(
-                Invitation.sender_id == patient_id, Invitation.invitee_id == current_user.id
+                Invitation.sender_id == patient_id,
+                Invitation.invitee_id == current_user.id,
             )
         )
         invitation_result = await db.execute(invitation_stmt)
