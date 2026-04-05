@@ -44,9 +44,9 @@ const chartOptions = {
 </script>
 
 <template>
-  <div class="bg-white border rounded-lg p-4 h-[240px] overflow-hidden">
-    <h4 class="font-semibold mb-2">Mood Chart</h4>
-    <div v-if="props.progressData?.length === 0" class="text-center py-16 text-gray-500">No progress data yet.</div>
-    <Line v-else :data="chartData" :options="chartOptions" />
+  <div class="bg-slate-800/80 backdrop-blur-md border border-slate-700 rounded-2xl p-5 h-[280px] shadow-xl overflow-hidden flex flex-col">
+    <h4 class="font-bold text-slate-200 mb-2 px-1">Mood Chart</h4>
+    <div v-if="props.progressData?.length === 0" class="flex-1 flex items-center justify-center text-slate-500">No progress data yet.</div>
+    <div v-else class="flex-1 relative w-full"><Line :data="chartData" :options="chartOptions" /></div>
   </div>
 </template>
