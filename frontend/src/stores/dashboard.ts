@@ -13,7 +13,7 @@ export const useDashboardStore = defineStore('dashboard', {
     guidelines: (JSON.parse(localStorage.getItem('dashboard_guidelines') || 'null') as Guidelines | null),
     invitations: [] as Invitation[],
     emotionHistory: [] as Array<{ snapshot_at: string; dominant_emotion: string; average_score: number }>,
-    progress: [] as Array<{ summary_date: string; session_count: number; avg_emotion_score: number | null; dominant_emotion: string | null; danger_event_count: number }>,
+    progress: [] as Array<{ summary_date: string; session_count: number; avg_emotion_score: number | null; dominant_emotion: string | null; danger_event_count: number; total_messages: number }>,
     sessions: [] as Session[],
     selectedSessionId: null as string | null,
     messages: [] as Message[],

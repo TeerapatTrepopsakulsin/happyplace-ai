@@ -95,5 +95,45 @@ export const useChatStore = defineStore('chat', {
         this.loading = false
       }
     },
+    async renameSession(id: string, title: string) {
+      this.loading = true
+      this.error = null
+      try {
+        const res = await client.patch(`/chat/sessions/${id}`, { title })
+        const index = this.sessions.findIndex((s) => s.id === id)
+        if (index !== -1) {
+          this.sessions[index] = res.data
+        }
+        localStorage.setItem('chat_sessions', JSON.stringify(this.sessions))
+        return res.data
+      } catch (err: any) {
+        this.error = err.response?.data?.detail || 'Failed to rename session'
+      } finally {
+        this.loading = false
+      }
+    },
+    async deleteSession(id: string) {
+      this.loading = true
+      this.error = null
+      try {
+        await client.delete(`/chat/sessions/${id}`)
+        this.sessions = this.sessions.filter((s) => s.id !== id)
+        localStorage.setItem('chat_sessions', JSON.stringify(this.sessions))
+        if (this.activeSessionId === id) {
+          if (this.sessions.length > 0) {
+            await this.selectSession(this.sessions[0]!.id)
+          } else {
+            this.activeSessionId = null
+            localStorage.removeItem('chat_activeSessionId')
+            this.messages = []
+            localStorage.setItem('chat_messages', '[]')
+          }
+        }
+      } catch (err: any) {
+        this.error = err.response?.data?.detail || 'Failed to delete session'
+      } finally {
+        this.loading = false
+      }
+    },
   },
 })
