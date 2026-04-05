@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import client from '../api/client'
 import type { Message, Session } from '../types'
+import axios from 'axios'
 
 interface State {
   sessions: Session[]
@@ -27,8 +28,12 @@ export const useChatStore = defineStore('chat', {
         this.sessions = res.data
         localStorage.setItem('chat_sessions', JSON.stringify(this.sessions))
         return this.sessions
-      } catch (err: any) {
-        this.error = err.response?.data?.detail || 'Failed to fetch sessions'
+      } catch (err: unknown) {
+        if (axios.isAxiosError(err)) {
+          this.error = err.response?.data?.detail || 'Failed to fetch sessions'
+        } else {
+          this.error = 'An unexpected error occurred'
+        }
       } finally {
         this.loading = false
       }
@@ -45,8 +50,12 @@ export const useChatStore = defineStore('chat', {
         this.messages = []
         localStorage.setItem('chat_messages', JSON.stringify(this.messages))
         return res.data
-      } catch (err: any) {
-        this.error = err.response?.data?.detail || 'Failed to create session'
+      } catch (err: unknown) {
+        if (axios.isAxiosError(err)) {
+          this.error = err.response?.data?.detail || 'Failed to create session'
+        } else {
+          this.error = 'An unexpected error occurred'
+        }
       } finally {
         this.loading = false
       }
@@ -61,8 +70,12 @@ export const useChatStore = defineStore('chat', {
         this.messages = res.data
         localStorage.setItem('chat_messages', JSON.stringify(this.messages))
         return this.messages
-      } catch (err: any) {
-        this.error = err.response?.data?.detail || 'Failed to fetch messages'
+      } catch (err: unknown) {
+        if (axios.isAxiosError(err)) {
+          this.error = err.response?.data?.detail || 'Failed to fetch messages'
+        } else {
+          this.error = 'An unexpected error occurred'
+        }
       } finally {
         this.loading = false
       }
@@ -80,7 +93,9 @@ export const useChatStore = defineStore('chat', {
       this.loading = true
 
       try {
-        const res = await client.post(`/chat/sessions/${this.activeSessionId}/messages`, { content })
+        const res = await client.post(`/chat/sessions/${this.activeSessionId}/messages`, {
+          content,
+        })
         if (res.data?.user_message && res.data?.assistant_message) {
           // Replace temp message with actual message from server
           this.messages = this.messages.filter((m) => m.id !== tempId)
@@ -88,9 +103,13 @@ export const useChatStore = defineStore('chat', {
           this.messages.push(res.data.assistant_message)
         }
         localStorage.setItem('chat_messages', JSON.stringify(this.messages))
-      } catch (err: any) {
+      } catch (err: unknown) {
         this.messages = this.messages.filter((m) => m.id !== tempId)
-        this.error = err.response?.data?.detail || 'Failed to send message'
+        if (axios.isAxiosError(err)) {
+          this.error = err.response?.data?.detail || 'Failed to send message'
+        } else {
+          this.error = 'An unexpected error occurred'
+        }
       } finally {
         this.loading = false
       }
@@ -106,8 +125,12 @@ export const useChatStore = defineStore('chat', {
         }
         localStorage.setItem('chat_sessions', JSON.stringify(this.sessions))
         return res.data
-      } catch (err: any) {
-        this.error = err.response?.data?.detail || 'Failed to rename session'
+      } catch (err: unknown) {
+        if (axios.isAxiosError(err)) {
+          this.error = err.response?.data?.detail || 'Failed to rename session'
+        } else {
+          this.error = 'An unexpected error occurred'
+        }
       } finally {
         this.loading = false
       }
@@ -129,8 +152,12 @@ export const useChatStore = defineStore('chat', {
             localStorage.setItem('chat_messages', '[]')
           }
         }
-      } catch (err: any) {
-        this.error = err.response?.data?.detail || 'Failed to delete session'
+      } catch (err: unknown) {
+        if (axios.isAxiosError(err)) {
+          this.error = err.response?.data?.detail || 'Failed to delete session'
+        } else {
+          this.error = 'An unexpected error occurred'
+        }
       } finally {
         this.loading = false
       }

@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import client from '../api/client'
 import router from '../router'
 import type { User } from '../types'
+import axios from 'axios'
 
 function decodeJwt(token: string): User | null {
   try {
@@ -58,11 +59,15 @@ export const useAuthStore = defineStore('auth', {
         this.user = parsed
         const postLoginRoute = this.user.role === 'regular' ? '/chat' : '/dashboard'
         await router.push(postLoginRoute)
-      } catch (err: any) {
-        if (err.response?.status === 401) {
-          this.authError = 'Invalid credentials'
+      } catch (err: unknown) {
+        if (axios.isAxiosError(err)) {
+          if (err.response?.status === 401) {
+            this.authError = 'Invalid credentials'
+          } else {
+            this.authError = err.response?.data?.detail || 'Login failed'
+          }
         } else {
-          this.authError = err.response?.data?.detail || 'Login failed'
+          this.authError = 'An unexpected error occurred'
         }
         this.token = null
         this.user = null
@@ -74,8 +79,12 @@ export const useAuthStore = defineStore('auth', {
       try {
         await client.post('/auth/register', { email, password, display_name, role })
         await router.push('/login')
-      } catch (err: any) {
-        this.authError = err.response?.data?.detail || 'Registration failed'
+      } catch (err: unknown) {
+        if (axios.isAxiosError(err)) {
+          this.authError = err.response?.data?.detail || 'Registration failed'
+        } else {
+          this.authError = 'An unexpected error occurred'
+        }
         throw err
       }
     },

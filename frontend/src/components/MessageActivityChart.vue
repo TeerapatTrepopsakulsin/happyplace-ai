@@ -7,7 +7,9 @@ Chart.register(...registerables)
 
 const props = defineProps<{ progress: Array<{ summary_date: string; total_messages: number }> }>()
 
-const labels = computed(() => props.progress.map((entry) => new Date(entry.summary_date).toLocaleDateString()))
+const labels = computed(() =>
+  props.progress.map((entry) => new Date(entry.summary_date).toLocaleDateString()),
+)
 const counts = computed(() => props.progress.map((entry) => entry.total_messages))
 
 const chartData = computed(() => ({
@@ -42,9 +44,18 @@ const chartOptions = {
 </script>
 
 <template>
-  <div class="bg-slate-800/80 backdrop-blur-md border border-slate-700 rounded-2xl p-5 h-[400px] shadow-xl overflow-hidden flex flex-col">
+  <div
+    class="bg-slate-800/80 backdrop-blur-md border border-slate-700 rounded-2xl p-5 h-[400px] shadow-xl overflow-hidden flex flex-col"
+  >
     <h4 class="font-bold text-slate-200 mb-2 px-1">Message Activity</h4>
-    <div v-if="props.progress?.length === 0" class="flex-1 flex items-center justify-center text-slate-500">No progress data yet.</div>
-    <div v-else class="flex-1 relative w-full"><Bar :data="chartData" :options="chartOptions" /></div>
+    <div
+      v-if="props.progress?.length === 0"
+      class="flex-1 flex items-center justify-center text-slate-500"
+    >
+      No progress data yet.
+    </div>
+    <div v-else class="flex-1 relative w-full">
+      <Bar :data="chartData" :options="chartOptions" />
+    </div>
   </div>
 </template>

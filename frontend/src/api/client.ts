@@ -26,7 +26,7 @@ client.interceptors.response.use(
       router.push('/login')
     }
     return Promise.reject(error)
-  }
+  },
 )
 
 export default client
