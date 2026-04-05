@@ -6,6 +6,9 @@ from datetime import date
 from sqlalchemy import select, func
 from sqlalchemy.dialects.postgresql import insert
 
+# Import all models to ensure they are registered with SQLAlchemy
+import app.models  # noqa: F401
+
 from app.models.messages import Message
 from app.models.emotion_snapshots import EmotionSnapshot
 from app.models.dashboard_summary import DashboardSummary
@@ -234,8 +237,12 @@ async def handle_danger(payload: dict, db):
 
         danger_keywords = _get_danger_keywords()
         content_lower = payload["content"].lower()
+        logger.info("Danger keywords configured: %s", danger_keywords)
 
-        if not any(kw in content_lower for kw in danger_keywords):
+        matched = [kw for kw in danger_keywords if kw in content_lower]
+        logger.info("Danger keywords matched: %s", matched)
+
+        if not matched:
             return
 
         msg = await _load_message_by_id(db, payload["message_id"])

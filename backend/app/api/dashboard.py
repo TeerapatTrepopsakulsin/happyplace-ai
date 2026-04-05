@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select, func, and_, desc
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List
+from collections import Counter
 from pydantic import BaseModel
 from datetime import datetime, timedelta
 
@@ -20,7 +21,7 @@ router = APIRouter()
 class PatientSummary(BaseModel):
     patient_id: str
     display_name: str | None
-    last_active: datetime | None
+    last_active: str | None  # ISO format string or None
     latest_emotion: str | None
 
 
@@ -32,6 +33,7 @@ class DashboardSummaryResponse(BaseModel):
 
 
 class AlertResponse(BaseModel):
+    id: str
     patient_id: str
     session_id: str
     message_id: str
@@ -105,7 +107,7 @@ async def get_patients(
                 display_name=str(patient.display_name)
                 if patient.display_name
                 else None,
-                last_active=last_active,
+                last_active=last_active.isoformat() if last_active else None,
                 latest_emotion=latest_emotion,
             )
         )
@@ -149,6 +151,58 @@ def _calculate_mood_trend(summaries: List[DashboardSummary]) -> str:
     return "stable"
 
 
+def _get_dominant_emotion(summaries: list[DashboardSummary]) -> str | None:
+    emotions = [s.dominant_emotion for s in summaries if s.dominant_emotion]
+    if not emotions:
+        return None
+
+    emotion_counts = Counter(emotions)
+    max_count = max(emotion_counts.values())
+    candidates = [str(e) for e, count in emotion_counts.items() if count == max_count]
+
+    if len(candidates) == 1:
+        return candidates[0]
+
+    return _resolve_emotion_tie(summaries, candidates)
+
+
+def _resolve_emotion_tie(
+    summaries: list[DashboardSummary], candidates: list[str]
+) -> str | None:
+    sorted_summaries = sorted(summaries, key=lambda s: s.summary_date, reverse=True)
+    for summary in sorted_summaries:
+        if summary.dominant_emotion in candidates:
+            return str(summary.dominant_emotion)
+    return None
+
+
+def _build_empty_summary_response() -> DashboardSummaryResponse:
+    return DashboardSummaryResponse(
+        mood_trend="stable",
+        dominant_emotion_last_7d=None,
+        session_count_last_7d=0,
+        danger_events_last_7d=0,
+    )
+
+
+async def _fetch_recent_summaries(
+    patient_id: str, db: AsyncSession
+) -> list[DashboardSummary]:
+    seven_days_ago = datetime.utcnow() - timedelta(days=7)
+    stmt = (
+        select(DashboardSummary)
+        .where(
+            and_(
+                DashboardSummary.user_id == patient_id,
+                DashboardSummary.summary_date >= seven_days_ago.date(),
+            )
+        )
+        .order_by(DashboardSummary.summary_date)
+    )
+    result = await db.execute(stmt)
+    return list(result.scalars().all())
+
+
 @router.get(
     "/dashboard/patients/{patient_id}/summary", response_model=DashboardSummaryResponse
 )
@@ -159,63 +213,15 @@ async def get_patient_summary(
 ):
     await _verify_invitation(patient_id, current_user, db)
 
-    seven_days_ago = datetime.utcnow() - timedelta(days=7)
-    summaries_stmt = (
-        select(DashboardSummary)
-        .where(
-            and_(
-                DashboardSummary.user_id == patient_id,
-                DashboardSummary.summary_date >= seven_days_ago.date(),
-            )
-        )
-        .order_by(DashboardSummary.summary_date)
-    )
-    summaries_result = await db.execute(summaries_stmt)
-    summaries: list[DashboardSummary] = list(summaries_result.scalars().all())
-
+    summaries = await _fetch_recent_summaries(patient_id, db)
     if not summaries:
-        return DashboardSummaryResponse(
-            mood_trend="stable",
-            dominant_emotion_last_7d=None,
-            session_count_last_7d=0,
-            danger_events_last_7d=0,
-        )
-
-    session_count_last_7d = sum(s.session_count for s in summaries)
-    danger_events_last_7d = sum(s.danger_event_count for s in summaries)
-
-    emotions = [s.dominant_emotion for s in summaries if s.dominant_emotion]
-    dominant_emotion_last_7d = None
-    if emotions:
-        from collections import Counter
-
-        emotion_counts = Counter(emotions)
-        max_count = max(emotion_counts.values())
-        candidates = [
-            emotion for emotion, count in emotion_counts.items() if count == max_count
-        ]
-
-        if len(candidates) == 1:
-            dominant_emotion_last_7d = candidates[0]
-        else:
-            # If there is a tie, prefer the most recent dominant emotion from summaries
-            sorted_summaries = sorted(
-                summaries, key=lambda s: s.summary_date, reverse=True
-            )
-            for summary in sorted_summaries:
-                if summary.dominant_emotion in candidates:
-                    dominant_emotion_last_7d = summary.dominant_emotion
-                    break
-
-    mood_trend = _calculate_mood_trend(summaries)
+        return _build_empty_summary_response()
 
     return DashboardSummaryResponse(
-        mood_trend=mood_trend,
-        dominant_emotion_last_7d=str(dominant_emotion_last_7d)
-        if dominant_emotion_last_7d
-        else None,
-        session_count_last_7d=int(session_count_last_7d),
-        danger_events_last_7d=int(danger_events_last_7d),
+        mood_trend=_calculate_mood_trend(summaries),
+        dominant_emotion_last_7d=_get_dominant_emotion(summaries),
+        session_count_last_7d=int(sum(s.session_count for s in summaries)),
+        danger_events_last_7d=int(sum(s.danger_event_count for s in summaries)),
     )
 
 
@@ -243,6 +249,7 @@ async def get_alerts(
 
     return [
         AlertResponse(
+            id=str(alert.id),
             patient_id=str(alert.user_id),
             session_id=str(alert.session_id),
             message_id=str(alert.message_id),

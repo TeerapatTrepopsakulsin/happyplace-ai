@@ -34,26 +34,44 @@ class GuidelinesUpdateRequest(BaseModel):
 @router.get("/guidelines/{patient_id}", response_model=GuidelinesResponse)
 async def get_guidelines(
     patient_id: str,
-    current_user: User = Depends(require_role("therapist")),
+    current_user: User = Depends(require_role("therapist", "regular")),
     db: AsyncSession = Depends(get_db),
 ):
+    # Verify user
+    if current_user.role == "regular":
+        if str(current_user.id) != patient_id:
+            raise HTTPException(status_code=403, detail="Access denied")
+
     # Verify invitation
-    invitation_stmt = select(Invitation).where(
-        and_(
-            Invitation.sender_id == patient_id, Invitation.invitee_id == current_user.id
+    else:
+        invitation_stmt = select(Invitation).where(
+            and_(
+                Invitation.sender_id == patient_id,
+                Invitation.invitee_id == current_user.id,
+            )
         )
-    )
-    invitation_result = await db.execute(invitation_stmt)
-    invitation = invitation_result.scalar_one_or_none()
-    if not invitation:
-        raise HTTPException(status_code=403, detail="Access denied")
+        invitation_result = await db.execute(invitation_stmt)
+        invitation = invitation_result.scalar_one_or_none()
+        if not invitation:
+            raise HTTPException(status_code=403, detail="Access denied")
 
     # Get guidelines
     stmt = select(ChatbotGuidelines).where(ChatbotGuidelines.user_id == patient_id)
     result = await db.execute(stmt)
     guidelines = result.scalar_one_or_none()
     if not guidelines:
-        raise HTTPException(status_code=404, detail="Guidelines not found")
+        # No saved guideline yet for this user; initialize a record to ensure the client can retrieve/update it consistently.
+        guidelines = ChatbotGuidelines(
+            user_id=patient_id,
+            authored_by=current_user.id,
+            response_tone=None,
+            coping_strategies=None,
+            behavioral_boundaries=None,
+            sensitive_topics=[],
+        )
+        db.add(guidelines)
+        await db.commit()
+        await db.refresh(guidelines)
 
     return GuidelinesResponse(
         id=str(guidelines.id),
@@ -79,19 +97,26 @@ async def get_guidelines(
 async def update_guidelines(
     patient_id: str,
     request: GuidelinesUpdateRequest,
-    current_user: User = Depends(require_role("therapist")),
+    current_user: User = Depends(require_role("therapist", "regular")),
     db: AsyncSession = Depends(get_db),
 ):
+    # Verify user
+    if current_user.role == "regular":
+        if str(current_user.id) != patient_id:
+            raise HTTPException(status_code=403, detail="Access denied")
+
     # Verify invitation
-    invitation_stmt = select(Invitation).where(
-        and_(
-            Invitation.sender_id == patient_id, Invitation.invitee_id == current_user.id
+    else:
+        invitation_stmt = select(Invitation).where(
+            and_(
+                Invitation.sender_id == patient_id,
+                Invitation.invitee_id == current_user.id,
+            )
         )
-    )
-    invitation_result = await db.execute(invitation_stmt)
-    invitation = invitation_result.scalar_one_or_none()
-    if not invitation:
-        raise HTTPException(status_code=403, detail="Access denied")
+        invitation_result = await db.execute(invitation_stmt)
+        invitation = invitation_result.scalar_one_or_none()
+        if not invitation:
+            raise HTTPException(status_code=403, detail="Access denied")
 
     # Upsert guidelines
     from sqlalchemy.dialects.postgresql import insert
