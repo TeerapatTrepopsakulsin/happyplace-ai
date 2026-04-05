@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import select, desc, and_
+from sqlalchemy import select, desc, and_, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 from pydantic import BaseModel
 from typing import List
@@ -44,6 +44,10 @@ class MessageResponse(BaseModel):
 
 class SendMessageRequest(BaseModel):
     content: str
+
+
+class SessionUpdateRequest(BaseModel):
+    title: str
 
 
 class SendMessageResponse(BaseModel):
@@ -128,6 +132,44 @@ async def create_session(
         created_at=session.created_at.isoformat(),
         last_active=None,
     )
+
+
+@router.patch("/sessions/{session_id}", response_model=SessionResponse)
+async def update_session(
+    session_id: str,
+    request: SessionUpdateRequest,
+    current_user: User = Depends(require_role("regular")),
+    db: AsyncSession = Depends(get_db),
+):
+    session = await db.get(ChatSession, session_id)
+    if not session or session.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Access denied")
+    session.title = request.title
+    db.add(session)
+    await db.commit()
+    await db.refresh(session)
+    return SessionResponse(
+        id=str(session.id),
+        title=str(session.title),
+        created_at=session.created_at.isoformat(),
+        last_active=session.last_active.isoformat() if session.last_active else None,
+    )
+
+
+@router.delete("/sessions/{session_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_session(
+    session_id: str,
+    current_user: User = Depends(require_role("regular")),
+    db: AsyncSession = Depends(get_db),
+):
+    session = await db.get(ChatSession, session_id)
+    if not session or session.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Access denied")
+    delete_stmt = delete(Message).where(Message.session_id == session_id)
+    await db.execute(delete_stmt)
+    await db.delete(session)
+    await db.commit()
+    return None
 
 
 @router.get("/sessions/{session_id}/messages", response_model=List[MessageResponse])
