@@ -52,6 +52,9 @@ jobs:
             fi
           done
 
+      - name: Debug working directory
+        run: docker compose exec -T backend pwd
+
       - name: Run migrations
         run: docker compose exec -T --workdir /app backend alembic upgrade head
 
