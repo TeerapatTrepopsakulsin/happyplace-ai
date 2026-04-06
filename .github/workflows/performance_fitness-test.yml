@@ -36,6 +36,9 @@ jobs:
           echo "JWT_EXPIRE_HOURS=24" >> backend/.env
           echo "DANGER_KEYWORDS=hurt myself,end my life,suicide,kill myself,self-harm" >> backend/.env
 
+      - name: Check .env
+        run: docker compose exec -T backend cat /app/.env
+
       - name: Start services
         run: docker compose up -d --build
 
@@ -74,6 +77,10 @@ jobs:
             --html=report.html \
             --exit-code-on-error 1
 
+      - name: Check backend logs
+        if: always()
+        run: docker compose logs backend --tail=50
+        
       - name: Upload performance report
         uses: actions/upload-artifact@v4
         if: always()
