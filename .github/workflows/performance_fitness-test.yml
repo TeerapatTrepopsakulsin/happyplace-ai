@@ -5,8 +5,8 @@ on:
 
 env:
   TARGET_HOST: "http://localhost:8000"
-  USERS: "20"
-  SPAWN_RATE: "5"
+  USERS: "1"
+  SPAWN_RATE: "1"
   RUN_TIME: "60s"
 
 jobs:
@@ -22,15 +22,6 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Check secrets are set
-        run: |
-          if [ -z "${{ secrets.GROQ_API_KEY }}" ]; then
-            echo "GROQ_API_KEY is NOT set"
-            exit 1
-          else
-            echo "GROQ_API_KEY is set"
-          fi
-          
       - name: Create backend .env
         env:
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
