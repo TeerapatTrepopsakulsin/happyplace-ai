@@ -24,11 +24,11 @@ jobs:
 
       - name: Create backend .env
         run: |
-          cat > backend/.env << 'EOF'
+          cat > backend/.env << EOF
 GROQ_API_KEY=${{ secrets.GROQ_API_KEY }}
 JWT_SECRET=${{ secrets.JWT_SECRET }}
 GROQ_MODEL=llama3-70b-8192
-DATABASE_URL=postgresql+asyncpg://happyplace:happyplace@localhost:5432/happyplaceai
+DATABASE_URL=postgresql+asyncpg://happyplace:happyplace@db:5432/happyplaceai
 REDIS_URL=redis://redis:6379
 JWT_ALGORITHM=HS256
 JWT_EXPIRE_HOURS=24
