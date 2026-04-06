@@ -31,3 +31,8 @@ async def general_exception_handler(request: Request, exc: Exception):
         status_code=500,
         content={"detail": "Internal server error"},
     )
+
+
+@app.get("/health")
+async def health():
+    return {"status": "ok"}
