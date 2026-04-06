@@ -77,9 +77,9 @@ jobs:
             --html=report.html \
             --exit-code-on-error 1
 
-      - name: Check backend logs
+      - name: Check backend error logs
         if: always()
-        run: docker compose logs backend --tail=50
+        run: docker compose logs backend 2>&1 | grep -i "error\|groq"
 
       - name: Upload performance report
         uses: actions/upload-artifact@v4
