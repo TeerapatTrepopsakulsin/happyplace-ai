@@ -1,0 +1,63 @@
+name: Chatbot Performance Fitness Test
+
+on:
+  pull_request:
+
+env:
+  TARGET_HOST: "http://localhost:8000"
+  USERS: "20"
+  SPAWN_RATE: "5"
+  RUN_TIME: "60s"
+
+jobs:
+  performance-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Locust
+        run: pip install locust
+
+      - name: Run Locust load test
+        run: |
+          locust \
+            --headless \
+            --host ${{ env.TARGET_HOST }} \
+            --users ${{ env.USERS }} \
+            --spawn-rate ${{ env.SPAWN_RATE }} \
+            --run-time ${{ env.RUN_TIME }} \
+            --locustfile locustfile.py \
+            --csv=results \
+            --html=report.html \
+            --exit-code-on-error 1
+
+      - name: Upload performance report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: performance-report
+          path: |
+            report.html
+            results_stats.csv
+            results_failures.csv
+
+      - name: Print summary
+        if: always()
+        run: |
+          echo "## Performance Test Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          cat results_stats.csv | python3 -c "
+          import csv, sys
+          reader = csv.DictReader(sys.stdin)
+          print('| Endpoint | Requests | Failures | Avg (ms) | 95th% (ms) | RPS |')
+          print('|---|---|---|---|---|---|')
+          for row in reader:
+              print(f'| {row[\"Name\"]} | {row[\"Request Count\"]} | {row[\"Failure Count\"]} | {row[\"Average Response Time\"]} | {row[\"95%\"]} | {row[\"Requests/s\"]} |')
+          " >> $GITHUB_STEP_SUMMARY
