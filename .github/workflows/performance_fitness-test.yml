@@ -52,8 +52,13 @@ jobs:
             fi
           done
 
-      - name: Debug working directory
-        run: docker compose exec -T backend pwd
+      - name: Debug
+        run: |
+          docker compose exec -T backend pwd
+          docker compose exec -T backend ls -la /app
+          docker compose exec -T backend cat /app/alembic.ini
+          docker compose exec -T backend alembic --version
+          docker compose exec -T backend which alembic
 
       - name: Run migrations
         run: docker compose exec -T --workdir /app backend alembic upgrade head
