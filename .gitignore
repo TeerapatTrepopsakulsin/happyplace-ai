@@ -1,10 +1,8 @@
 **/.venv
 docs/**
 **/.env
-**/.env.*
 **/__pycache__/
 **/alembic/versions/*.pyc
 **/alembic/__pycache__/
 **/alembic/versions/__pycache__/
-**/alembic.ini
 *.debug
