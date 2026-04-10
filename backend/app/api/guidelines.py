@@ -1,34 +1,15 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select, and_, text
 from sqlalchemy.ext.asyncio import AsyncSession
-from pydantic import BaseModel
-from typing import List
 
 from app.core.dependencies import require_role
 from app.db.session import get_db
 from app.models.users import User
 from app.models.invitations import Invitation
 from app.models.chatbot_guidelines import ChatbotGuidelines
+from app.schemas import GuidelinesResponse, GuidelinesUpdateRequest
 
 router = APIRouter()
-
-
-class GuidelinesResponse(BaseModel):
-    id: str
-    patient_id: str
-    authored_by: str
-    response_tone: str | None
-    coping_strategies: str | None
-    behavioral_boundaries: str | None
-    sensitive_topics: List[str] | None
-    updated_at: str  # datetime as string
-
-
-class GuidelinesUpdateRequest(BaseModel):
-    response_tone: str | None = None
-    coping_strategies: str | None = None
-    behavioral_boundaries: str | None = None
-    sensitive_topics: List[str] | None = None
 
 
 @router.get("/guidelines/{patient_id}", response_model=GuidelinesResponse)

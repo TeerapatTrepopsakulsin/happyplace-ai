@@ -1,35 +1,19 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select, and_
 from sqlalchemy.ext.asyncio import AsyncSession
-from pydantic import BaseModel
 from typing import List
 
 from app.core.dependencies import require_role
 from app.db.session import get_db
 from app.models.users import User
 from app.models.invitations import Invitation
+from app.schemas import (
+    InvitationCreateRequest,
+    InvitationListResponse,
+    InvitationResponse,
+)
 
 router = APIRouter()
-
-
-class InvitationCreateRequest(BaseModel):
-    invitee_email: str
-
-
-class InvitationResponse(BaseModel):
-    id: str
-    invitee_email: str
-    invitee_display_name: str | None
-    role_granted: str
-    created_at: str  # datetime as string
-
-
-class InvitationListResponse(BaseModel):
-    id: str
-    invitee_email: str
-    invitee_display_name: str | None
-    role_granted: str
-    created_at: str  # datetime as string
 
 
 @router.post(

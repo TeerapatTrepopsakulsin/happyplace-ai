@@ -1,36 +1,19 @@
 from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel, EmailStr
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import hash_password, verify_password, create_access_token
 from app.db.session import get_db
 from app.models.users import User
+from app.schemas.auth import (
+    RegisterRequest,
+    RegisterResponse,
+    LoginRequest,
+    LoginResponse,
+)
+
 
 router = APIRouter()
-
-
-class RegisterRequest(BaseModel):
-    email: EmailStr
-    password: str
-    display_name: str | None = None
-    role: str
-
-
-class RegisterResponse(BaseModel):
-    id: str
-    email: str
-    role: str
-
-
-class LoginRequest(BaseModel):
-    email: EmailStr
-    password: str
-
-
-class LoginResponse(BaseModel):
-    access_token: str
-    token_type: str = "bearer"
 
 
 @router.post(
