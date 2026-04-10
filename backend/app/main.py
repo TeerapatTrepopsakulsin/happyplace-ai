@@ -6,6 +6,13 @@ from app.api.chat import router as chat_router
 from app.api.dashboard import router as dashboard_router
 from app.api.guidelines import router as guidelines_router
 from app.api.invitations import router as invitations_router
+from app.services.errors import (
+    BadRequestError,
+    ConflictError,
+    ExternalServiceError,
+    ForbiddenError,
+    NotFoundError,
+)
 
 app = FastAPI()
 
@@ -31,3 +38,30 @@ async def general_exception_handler(request: Request, exc: Exception):
         status_code=500,
         content={"detail": "Internal server error"},
     )
+
+
+@app.exception_handler(BadRequestError)
+async def bad_request_exception_handler(request: Request, exc: BadRequestError):
+    return JSONResponse(status_code=400, content={"detail": str(exc)})
+
+
+@app.exception_handler(ConflictError)
+async def conflict_exception_handler(request: Request, exc: ConflictError):
+    return JSONResponse(status_code=400, content={"detail": str(exc)})
+
+
+@app.exception_handler(ForbiddenError)
+async def forbidden_exception_handler(request: Request, exc: ForbiddenError):
+    return JSONResponse(status_code=403, content={"detail": str(exc)})
+
+
+@app.exception_handler(NotFoundError)
+async def not_found_exception_handler(request: Request, exc: NotFoundError):
+    return JSONResponse(status_code=404, content={"detail": str(exc)})
+
+
+@app.exception_handler(ExternalServiceError)
+async def external_service_exception_handler(
+    request: Request, exc: ExternalServiceError
+):
+    return JSONResponse(status_code=502, content={"detail": str(exc)})
