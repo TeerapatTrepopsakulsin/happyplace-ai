@@ -27,12 +27,12 @@ onMounted(async () => {
     await refreshData()
   }
 
-  // Refresh data every 30 seconds if a patient is selected
+  // Refresh data every 5 minutes if a patient is selected
   refreshInterval = setInterval(() => {
     if (dashboard.selectedPatientId) {
       refreshData()
     }
-  }, 30000)
+  }, 300000)
 })
 
 onUnmounted(() => {
