@@ -3,6 +3,11 @@ from datetime import datetime, timezone
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.llm import (
+    build_chat_system_prompt,
+    build_history_messages,
+    run_chat_chain,
+)
 from app.events.publisher import publish_message_created
 from app.models.chat_sessions import ChatSession
 from app.models.invitations import Invitation
@@ -10,9 +15,6 @@ from app.models.messages import Message
 from app.models.users import User
 from app.services.cache import get_session_messages
 from app.services.chatbot_service import (
-    build_system_prompt,
-    call_groq,
-    get_conversation_history,
     get_guidelines,
     update_session_cache,
 )
@@ -80,11 +82,12 @@ async def send_message_for_user(
     await db.commit()
     await db.refresh(user_msg)
 
-    history = await get_conversation_history(session_id, redis_client, db)
+    cached_messages = await get_session_messages(session_id, redis_client, db)
+    history = build_history_messages(cached_messages)
     guidelines = await get_guidelines(current_user.id, db)
-    system_prompt = build_system_prompt(guidelines)
+    system_prompt = build_chat_system_prompt(guidelines)
     try:
-        assistant_content = await call_groq(system_prompt, history, content)
+        assistant_content = await run_chat_chain(system_prompt, history, content)
     except Exception:
         raise ExternalServiceError("LLM service unavailable")
 

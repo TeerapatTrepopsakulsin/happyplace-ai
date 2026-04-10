@@ -1,4 +1,3 @@
-import json
 import logging
 import os
 from collections import Counter
@@ -6,76 +5,25 @@ from datetime import date
 
 from sqlalchemy import select, func
 from sqlalchemy.dialects.postgresql import insert
-from langchain_groq import ChatGroq
-from langchain_core.messages import SystemMessage, HumanMessage
-from pydantic import SecretStr
 
+from app.core.llm import run_emotion_chain
 from app.models.messages import Message
 from app.models.emotion_snapshots import EmotionSnapshot
 from app.models.dashboard_summary import DashboardSummary
 
 logger = logging.getLogger(__name__)
 
-VALID_EMOTION_LABELS = {"happy", "sad", "anxious", "angry", "neutral", "distressed"}
-
-
-def _safe_emotion_result(raw_response: str):
-    try:
-        parsed = json.loads(raw_response)
-        label = parsed.get("emotion_label", "neutral")
-        score = parsed.get("emotion_score", 0.0)
-
-        if not isinstance(label, str) or label.lower() not in VALID_EMOTION_LABELS:
-            label = "neutral"
-
-        try:
-            score = float(score)
-            if score < 0.0 or score > 1.0:
-                score = 0.0
-        except Exception:
-            score = 0.0
-
-        return {"emotion_label": label.lower(), "emotion_score": score}
-    except Exception:
-        logger.exception("Invalid emotion analysis response, returning default")
-        return {"emotion_label": "neutral", "emotion_score": 0.0}
-
 
 async def analyse_emotion(content: str) -> dict:
     if not isinstance(content, str) or content.strip() == "":
         return {"emotion_label": "neutral", "emotion_score": 0.0}
 
-    model_name = os.getenv("GROQ_MODEL")
-    api_key = os.getenv("GROQ_API_KEY")
-    if not model_name or not api_key:
+    if not os.getenv("GROQ_MODEL") or not os.getenv("GROQ_API_KEY"):
         logger.error("GROQ_MODEL or GROQ_API_KEY is not set")
         return {"emotion_label": "neutral", "emotion_score": 0.0}
 
-    prompt = (
-        """
-Analyze the emotional state expressed in the following text. Classify it with one of these emotion labels: happy, sad, anxious, angry, neutral, distressed.
-
-Provide a score from 0.0 to 1.0 where:
-- 1.0 = very happy/positive
-- 0.5 = neutral
-- 0.0 = very sad/distressed/negative
-
-Respond only with valid JSON: {"emotion_label": "label", "emotion_score": 0.5}
-
-Text: %s
-"""
-        % content
-    )
-
     try:
-        llm = ChatGroq(model=model_name, api_key=SecretStr(api_key))
-        response = await llm.ainvoke(
-            [
-                SystemMessage(content=prompt),
-                HumanMessage(content=content),
-            ]
-        )
-        return _safe_emotion_result(str(response.content))
+        return await run_emotion_chain(content)
     except Exception:
         logger.exception("Emotion analysis Groq call failed")
         return {"emotion_label": "neutral", "emotion_score": 0.0}
