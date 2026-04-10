@@ -3,7 +3,6 @@ from sqlalchemy import select, func, and_, desc
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List
 from collections import Counter
-from pydantic import BaseModel
 from datetime import datetime, timedelta
 
 from app.core.dependencies import get_current_user, require_role
@@ -14,51 +13,16 @@ from app.models.chat_sessions import ChatSession
 from app.models.emotion_snapshots import EmotionSnapshot
 from app.models.dashboard_summary import DashboardSummary
 from app.models.danger_alerts import DangerAlert
+from app.schemas import (
+    AlertResponse,
+    AlertUpdateResponse,
+    DashboardSummaryResponse,
+    EmotionHistoryResponse,
+    PatientSummary,
+    ProgressResponse,
+)
 
 router = APIRouter()
-
-
-class PatientSummary(BaseModel):
-    patient_id: str
-    display_name: str | None
-    last_active: str | None  # ISO format string or None
-    latest_emotion: str | None
-
-
-class DashboardSummaryResponse(BaseModel):
-    mood_trend: str
-    dominant_emotion_last_7d: str | None
-    session_count_last_7d: int
-    danger_events_last_7d: int
-
-
-class AlertResponse(BaseModel):
-    id: str
-    patient_id: str
-    session_id: str
-    message_id: str
-    snippet: str | None
-    created_at: datetime
-
-
-class AlertUpdateResponse(BaseModel):
-    id: str
-    resolved: bool
-
-
-class EmotionHistoryResponse(BaseModel):
-    snapshot_at: datetime
-    dominant_emotion: str | None
-    average_score: float | None
-
-
-class ProgressResponse(BaseModel):
-    summary_date: str  # date as string
-    session_count: int
-    total_messages: int
-    avg_emotion_score: float | None
-    dominant_emotion: str | None
-    danger_event_count: int
 
 
 @router.get("/dashboard/patients", response_model=List[PatientSummary])

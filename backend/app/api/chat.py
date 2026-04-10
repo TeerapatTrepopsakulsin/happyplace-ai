@@ -1,7 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select, desc, and_, delete
 from sqlalchemy.ext.asyncio import AsyncSession
-from pydantic import BaseModel
 from typing import List
 
 from app.core.dependencies import get_current_user, require_role
@@ -20,39 +19,16 @@ from app.services.chat_service import (
 )
 from app.events.publisher import publish_message_created
 from app.core.redis import get_redis
+from app.schemas import (
+    MessageResponse,
+    SendMessageRequest,
+    SendMessageResponse,
+    SessionResponse,
+    SessionUpdateRequest,
+)
 
 
 router = APIRouter(prefix="/api/v1/chat")
-
-
-class SessionResponse(BaseModel):
-    id: str
-    title: str | None
-    created_at: str
-    last_active: str | None
-
-
-class MessageResponse(BaseModel):
-    id: str
-    sender: str
-    content: str
-    emotion_label: str | None
-    emotion_score: float | None
-    danger_flag: bool
-    created_at: str
-
-
-class SendMessageRequest(BaseModel):
-    content: str
-
-
-class SessionUpdateRequest(BaseModel):
-    title: str
-
-
-class SendMessageResponse(BaseModel):
-    user_message: MessageResponse
-    assistant_message: MessageResponse
 
 
 @router.get("/sessions", response_model=List[SessionResponse])
