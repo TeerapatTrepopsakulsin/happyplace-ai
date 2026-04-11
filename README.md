@@ -12,12 +12,12 @@ HappyPlaceAI uses a **Event-Based Layered Architecture**, combining a synchronou
 
 ### Quanta 1 — Synchronous (Layered)
 
-Handles all user-facing HTTP interactions. The Vue.js frontend communicates with the FastAPI API layer, which delegates to `chat_service.py` for LLM orchestration, reading and writing to PostgreSQL. Each layer has one responsibility and depends only on the layer below it.
+Handles all user-facing HTTP interactions. The Vue.js frontend communicates with the FastAPI API layer, reading and writing to PostgreSQL. Each layer has one responsibility and depends only on the layer below it.
 
 **Request flow:**
 1. User sends a message via the Chat UI
 2. `chat.py` persists the message and retrieves conversation history from Redis (falls back to PostgreSQL on cache miss)
-3. `chat_service.py` builds the prompt with guidelines and calls the Groq LLM
+3. `chatbot_service.py` builds the prompt with guidelines and calls the Groq LLM
 4. The assistant response is persisted and returned to the user immediately
 5. A `message.created` event is published to Redis
 
@@ -169,3 +169,28 @@ docker compose exec backend alembic upgrade head
 ```
 
 ## Screenshots
+### Authentication
+- **Login Page**
+![Login Page](asset/login.png)
+- **Register Page**
+![Register Page](asset/register.png)
+
+### Regular
+- **Chat Page**
+![Chat Page](asset/chat.png)
+- **Invitations & Collaborations Page**
+![Invitations & Collaborations Page](asset/invite.png)
+
+### Therapist
+- **Patients List Page**
+![Patients List Page](asset/patient_list.png)
+- **Dashboard**
+![Therapist Dashboard](asset/thr-dashboard-1.png)
+![Therapist Dashboard](asset/thr-dashboard-2.png)
+![Therapist Dashboard](asset/thr-dashboard-3.png)
+![Therapist Dashboard](asset/thr-dashboard-4.png)
+
+### Guardians
+- **Dashboard**
+![Guardians Dashboard](asset/grd-dashboard-1.png)
+![Guardians Dashboard](asset/grd-dashboard-2.png)
