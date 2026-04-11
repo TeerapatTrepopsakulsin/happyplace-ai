@@ -8,6 +8,8 @@ A Mental Health Support Chatbot that adapts its responses based on user emotions
 
 HappyPlaceAI uses a **Event-Based Layered Architecture**, combining a synchronous layered quanta for user-facing interactions and an asynchronous event-driven quanta for background processing.
 
+![System Architecture Diagram](asset/System%20Architecture.png)
+
 ### Architectural Quanta
 
 ### Quanta 1 — Synchronous (Layered)
@@ -40,6 +42,9 @@ Redis serves two distinct purposes:
 |---|---|
 | **Message Broker** | Carries `message.created` events from `publisher.py` to `analysis_worker.py`, fully decoupling the two quanta |
 | **Session Cache** | Stores the last 10 messages per active session for fast context retrieval without hitting PostgreSQL on every request |
+
+### Database Schema
+![Database Schema Diagram](asset/db_schema.pdf)
 
 
 ## User roles & permissions
