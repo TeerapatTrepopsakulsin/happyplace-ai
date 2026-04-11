@@ -2,7 +2,7 @@
 
 ## Description
 
-A Mental Health Support Chatbot that adapts its responses based on user emotions, historical interactions, and personalized coping strategies.
+A Mental Health Support Chatbot that adapts its responses based on user emotions, historical interactions, and personalized coping strategies. The system is designed to work alongside licensed therapists by providing them with summarized insights, behavioral trends, and risk alerts to support more informed and timely interventions. Additionally, with user consent, guardians or trusted individuals can monitor key well-being indicators and receive informations in critical situations, ensuring an added layer of safety and support for the user.
 
 ## System Architecture Overview
 
