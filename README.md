@@ -189,6 +189,7 @@ docker compose exec backend alembic upgrade head
 ### Therapist
 - **Patients List Page**
 ![Patients List Page](asset/patient_list.png)
+
 - **Dashboard**
 ![Therapist Dashboard](asset/thr-dashboard-1.png)
 ![Therapist Dashboard](asset/thr-dashboard-2.png)
